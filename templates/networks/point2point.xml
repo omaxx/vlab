@@ -1,0 +1,5 @@
+<network>
+  <name>{{ interface.network }}</name>
+  <bridge name='{{ interface.network }}' stp='off' delay='0'/>
+  <mtu size='9000'/>
+</network>

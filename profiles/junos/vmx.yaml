@@ -1,0 +1,20 @@
+images: junos/vmx/20.2R3-S2
+vms:
+  - name: re0
+    template: junos/vmx-re.xml
+    vcpu: 1
+    memory: 1024
+    images:
+      - junos-vmx-x86-64-20.2R3-S2.5.qcow2
+      - vmxhdd.img
+      - metadata-usb-re0.img
+  - name: fpc0
+    template: junos/vmx-fpc.xml
+    vcpu: 3
+    memory: 4096
+    images:
+      - vFPC-20210720.img
+      - metadata-usb-fpc0.img
+vnets:
+  - name: int
+    template: networks/default.xml

@@ -1,0 +1,5 @@
+<network>
+  <name>{{ device.name }}-{{ vnet.name }}</name>
+  <bridge name='{{ device.name }}-{{ vnet.name }}' stp='off' delay='0'/>
+  <mtu size='9000'/>
+</network>

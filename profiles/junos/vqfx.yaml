@@ -1,0 +1,14 @@
+vms:
+  - name: re
+    template: junos/vqfx-re.xml
+    vcpu: 1
+    memory: 1024
+  - name: pfe
+    template: junos/vqfx-pfe.xml
+    vcpu: 1
+    memory: 2048
+vnets:
+  - name: int
+    template: networks/default.xml
+  - name: res
+    template: networks/default.xml

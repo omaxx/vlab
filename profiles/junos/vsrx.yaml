@@ -1,0 +1,4 @@
+vms:
+  - template: junos/vsrx.xml
+    vcpu: 2
+    memory: 4096

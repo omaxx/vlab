@@ -1,0 +1,37 @@
+---
+- hosts: vlab
+  become: yes
+  vars_files:
+    - ../vlab.yaml
+
+  tasks:
+    - name: allow hugepages
+      ansible.posix.sysctl:
+        name: vm.nr_overcommit_hugepages
+        state: present
+        value: "{{ hugepages }}"
+        reload: yes
+
+- hosts: vlab
+  vars_files:
+    - ../vlab.yaml
+    - ../topologies/9vmx.yaml
+
+  tasks:
+    - name: define management network
+      community.libvirt.virt_net:
+        command: define
+        name: mgmt
+        xml: '{{ lookup("file", "../{{ local_path.templates }}/networks/management.xml") }}'
+
+    - name: define devices
+      include_tasks: tasks/device-deploy.yaml
+      loop: "{{ devices }}"
+      loop_control:
+        loop_var: device
+        label: "{{ device.name|default('') }}"
+
+    - name: copy vlab.sh
+      copy:
+        src: ../scripts/vlab.sh
+        dest: .local/bin

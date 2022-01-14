@@ -1,0 +1,82 @@
+<domain type='kvm'>
+  <name>{{ device.name }}-{{ vm.name }}</name>
+  <memory unit='MiB'>{{ vm.memory }}</memory>
+  <memoryBacking>
+    <nosharepages/>
+    <hugepages/>
+  </memoryBacking>
+  <vcpu placement='static'>{{ vm.vcpu }}</vcpu>
+  <numatune>
+    <memory mode='preferred' nodeset='0'/>
+  </numatune>
+  <os>
+    <type arch='x86_64' machine='pc'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+  </features>
+  <cpu mode='host-model'>
+    <topology sockets='1' cores='3' threads='1'/>
+  </cpu>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='raw' cache='directsync'/>
+      <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[0] }}'/>
+      <target dev='hda' bus='ide'/>
+    </disk>
+
+    <controller type='pci' index='0' model='pci-root'/>
+
+    <interface type='network'>
+      <source network='mgmt'/>
+      <model type='virtio'/>
+    </interface>
+
+    <interface type='network'>
+      <source network='{{ device.name }}-int'/>
+      <model type='virtio'/>
+    </interface>
+
+    {% for interface in device.interfaces %}
+    <interface type='network'>
+      <source network='{{ interface.network }}'/>
+      <model type='virtio'/>
+    </interface>
+    {% endfor %}
+
+   <serial type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='{{ port.console + 100 + device.id }}'/>
+      <protocol type='telnet'/>
+      <target port='0'/>
+    </serial>
+
+    <console type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='{{ port.console + 100 + device.id }}'/>
+      <protocol type='telnet'/>
+      <target type='serial' port='0'/>
+    </console>
+
+    <input type='tablet' bus='usb'/>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+
+    <graphics type='vnc' port='{{ port.vnc + 100 + device.id }}' autoport='yes' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
+    
+    <sound model='ac97'>
+    </sound>
+    <video>
+      <model type='cirrus' vram='9216' heads='1'/>
+    </video>
+    <memballoon model='virtio'>
+    </memballoon>
+  </devices>
+</domain>

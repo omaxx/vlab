@@ -1,0 +1,33 @@
+devices:
+  - name: r1
+    id: 1
+    profile: junos/vmx
+    interfaces:
+      - network: r1_r2_1
+      - network: r1_r2_2
+      - network: r1_r3
+      - network: r1_r4
+  - name: r2
+    id: 2
+    profile: junos/vmx
+    interfaces:
+      - network: r1_r2_1
+      - network: r1_r2_2
+      - network: r2_r3
+      - network: r2_r4
+  - name: r3
+    id: 3
+    profile: junos/vmx
+    interfaces:
+      - network: r3_r4_1
+      - network: r3_r4_2
+      - network: r1_r3
+      - network: r2_r3
+  - name: r4
+    id: 4
+    profile: junos/vmx
+    interfaces:
+      - network: r3_r4_1
+      - network: r3_r4_2
+      - network: r1_r4
+      - network: r2_r4

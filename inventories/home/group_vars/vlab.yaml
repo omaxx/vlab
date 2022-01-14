@@ -1,0 +1,6 @@
+path:
+  images: images
+  vlab: /home/maxim/vlab
+port:
+  vnc: 9000
+  console: 8600
