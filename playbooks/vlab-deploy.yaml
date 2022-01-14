@@ -2,7 +2,7 @@
 - hosts: vlab
   vars_files:
     - ../vlab.yaml
-    - ../topologies/2vmx-2vqfx.yaml
+    - ../topologies/jnpr/2vmx-2vqfx.yaml
 
   tasks:
     - name: define management network
