@@ -38,7 +38,7 @@ case $1 in
     ;;
 
   destroy)
-    confirm "Are you sure to destroy all VMs? [y/N]"|| exit
+    # confirm "Are you sure to destroy all VMs? [y/N]"|| exit
 
     for vm in $(virsh -c qemu:///system list --all --name); do virsh -c qemu:///system undefine $vm; done
     for net in $(virsh -c qemu:///system net-list --all --name); do virsh -c qemu:///system net-undefine $net; done

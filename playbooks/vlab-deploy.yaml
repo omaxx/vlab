@@ -1,21 +1,8 @@
 ---
 - hosts: vlab
-  become: yes
   vars_files:
     - ../vlab.yaml
-
-  tasks:
-    - name: allow hugepages
-      ansible.posix.sysctl:
-        name: vm.nr_overcommit_hugepages
-        state: present
-        value: "{{ hugepages }}"
-        reload: yes
-
-- hosts: vlab
-  vars_files:
-    - ../vlab.yaml
-    - ../topologies/9vmx.yaml
+    - ../topologies/2vmx-2vqfx.yaml
 
   tasks:
     - name: define management network
@@ -31,7 +18,9 @@
         loop_var: device
         label: "{{ device.name|default('') }}"
 
-    - name: copy vlab.sh
+    - name: copy vlab script
       copy:
-        src: ../scripts/vlab.sh
+        src: ../scripts/vlab
         dest: .local/bin
+        mode: u=rwx,g=rx,o=rx
+        force: yes

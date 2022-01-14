@@ -61,63 +61,66 @@
       <driver name='qemu' type='qcow2'/>
       <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[0] }}'/>
       <backingStore/>
-      <target dev='vda' bus='virtio'/>
-      <alias name='virtio-disk0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </disk>
-
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[1] }}'/>
-      <backingStore/>
-      <target dev='vdb' bus='virtio'/>
-      <alias name='virtio-disk1'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-    </disk>
-
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='raw'/>
-      <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[2] }}'/>
-      <backingStore/>
-      <target dev='vdc' bus='virtio'/>
-      <alias name='virtio-disk2'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
+      <target dev='hda' bus='ide'/>
+      <alias name='ide0-0-0'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
 
     <controller type='usb' index='0' model='ich9-ehci1'>
       <alias name='usb'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x7'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0e' function='0x7'/>
     </controller>
     <controller type='usb' index='0' model='ich9-uhci1'>
       <alias name='usb'/>
       <master startport='0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0' multifunction='on'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0e' function='0x0' multifunction='on'/>
     </controller>
     <controller type='usb' index='0' model='ich9-uhci2'>
       <alias name='usb'/>
       <master startport='2'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x1'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0e' function='0x1'/>
     </controller>
     <controller type='usb' index='0' model='ich9-uhci3'>
       <alias name='usb'/>
       <master startport='4'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x2'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0e' function='0x2'/>
     </controller>
     <controller type='pci' index='0' model='pci-root'>
       <alias name='pci.0'/>
+    </controller>
+    <controller type='ide' index='0'>
+      <alias name='ide'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
     </controller>
 
     <interface type='network'>
       <source network='mgmt'/>
       <target dev='{{ device.name}}-{{ vm.name }}-mgmt'/>
-      <model type='virtio'/>
+      <model type='e1000'/>
     </interface>
 
     <interface type='network'>
       <source network='{{ device.name }}-int'/>
       <target dev='{{ device.name}}-{{ vm.name }}-int'/>
-      <model type='virtio'/>
+      <model type='e1000'/>
     </interface>
+
+    <interface type='network'>
+      <source network='{{ device.name }}-res'/>
+      <target dev='{{ device.name}}-{{ vm.name }}-res'/>
+      <model type='e1000'/>
+    </interface>
+
+    {% if 'interfaces' in device %}
+    {% for interface in device.interfaces %}
+    <interface type='network'>
+      <mac address='aa:aa:aa:{{ device.id }}:00:{{ loop.index + 1 }}'/>
+      <source network='{{ interface.network }}'/>
+      <target dev='{{ device.name}}-{{ vm.name }}-{{ loop.index }}'/>
+      <model type='e1000'/>
+    </interface>
+    {% endfor %}
+    {% endif %}
 
     <serial type='tcp'>
       <source mode='bind' host='0.0.0.0' service='{{ port.console + device.id }}'/>
@@ -138,12 +141,16 @@
       </target>
       <alias name='serial0'/>
     </serial>
+
     <console type='pty' tty='/dev/pts/1'>
       <source path='/dev/pts/1'/>
       <target type='serial' port='0'/>
       <alias name='serial0'/>
     </console>
 -->
+    <graphics type='vnc' port='{{ port.vnc + device.id }}' listen='0.0.0.0'>
+      <listen type='address' address='0.0.0.0'/>
+    </graphics>
 
     <input type='mouse' bus='ps2'>
       <alias name='input0'/>
@@ -153,14 +160,14 @@
     </input>
     <memballoon model='virtio'>
       <alias name='balloon0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x0f' function='0x0'/>
     </memballoon>
   </devices>
 
 <!--
   <seclabel type='dynamic' model='selinux' relabel='yes'>
-    <label>system_u:system_r:svirt_t:s0:c647,c710</label>
-    <imagelabel>system_u:object_r:svirt_image_t:s0:c647,c710</imagelabel>
+    <label>system_u:system_r:svirt_t:s0:c41,c803</label>
+    <imagelabel>system_u:object_r:svirt_image_t:s0:c41,c803</imagelabel>
   </seclabel>
   <seclabel type='dynamic' model='dac' relabel='yes'>
     <label>+0:+0</label>

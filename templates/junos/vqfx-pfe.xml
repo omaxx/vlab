@@ -19,26 +19,11 @@
   <cpu mode='custom' match='exact' check='full'>
     <!--
     <model fallback='forbid'>Broadwell-IBRS</model>
-    <vendor>Intel</vendor>
-    <feature policy='require' name='vme'/>
-    <feature policy='require' name='ss'/>
-    <feature policy='disable' name='ht'/>
-    <feature policy='disable' name='vmx'/>
-    <feature policy='disable' name='osxsave'/>
-    <feature policy='require' name='f16c'/>
-    <feature policy='require' name='rdrand'/>
-    <feature policy='require' name='hypervisor'/>
-    <feature policy='disable' name='arat'/>
-    <feature policy='disable' name='tsc_adjust'/>
-    <feature policy='require' name='md-clear'/>
-    <feature policy='require' name='stibp'/>
-    <feature policy='require' name='ssbd'/>
-    <feature policy='require' name='xsaveopt'/>
-    <feature policy='disable' name='pdpe1gb'/>
-    <feature policy='require' name='abm'/>
     <feature policy='disable' name='hle'/>
     <feature policy='disable' name='rtm'/>
+    <feature policy='require' name='hypervisor'/>
     <feature policy='disable' name='erms'/>
+    <feature policy='require' name='xsaveopt'/>
     -->
   </cpu>
   <clock offset='utc'>
@@ -61,27 +46,9 @@
       <driver name='qemu' type='qcow2'/>
       <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[0] }}'/>
       <backingStore/>
-      <target dev='vda' bus='virtio'/>
-      <alias name='virtio-disk0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </disk>
-
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[1] }}'/>
-      <backingStore/>
-      <target dev='vdb' bus='virtio'/>
-      <alias name='virtio-disk1'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-    </disk>
-
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='raw'/>
-      <source file='{{ path.vlab }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[2] }}'/>
-      <backingStore/>
-      <target dev='vdc' bus='virtio'/>
-      <alias name='virtio-disk2'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
+      <target dev='hda' bus='ide'/>
+      <alias name='ide0-0-0'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
 
     <controller type='usb' index='0' model='ich9-ehci1'>
@@ -106,44 +73,50 @@
     <controller type='pci' index='0' model='pci-root'>
       <alias name='pci.0'/>
     </controller>
+    <controller type='ide' index='0'>
+      <alias name='ide'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
 
     <interface type='network'>
       <source network='mgmt'/>
       <target dev='{{ device.name}}-{{ vm.name }}-mgmt'/>
-      <model type='virtio'/>
+      <model type='e1000'/>
     </interface>
 
     <interface type='network'>
       <source network='{{ device.name }}-int'/>
       <target dev='{{ device.name}}-{{ vm.name }}-int'/>
-      <model type='virtio'/>
+      <model type='e1000'/>
     </interface>
 
     <serial type='tcp'>
-      <source mode='bind' host='0.0.0.0' service='{{ port.console + device.id }}'/>
-      <protocol type='telnet'/>
-      <target port='0'/>
-    </serial>
-    <console type='tcp'>
-      <source mode='bind' host='0.0.0.0' service='{{ port.console + device.id }}'/>
-      <protocol type='telnet'/>
-      <target type='serial' port='0'/>
-    </console>
+       <source mode='bind' host='0.0.0.0' service='{{ port.console + 100 + device.id }}'/>
+       <protocol type='telnet'/>
+       <target port='0'/>
+     </serial>
+
+     <console type='tcp'>
+       <source mode='bind' host='0.0.0.0' service='{{ port.console + 100 + device.id }}'/>
+       <protocol type='telnet'/>
+       <target type='serial' port='0'/>
+     </console>
 
 <!--
     <serial type='pty'>
-      <source path='/dev/pts/1'/>
+      <source path='/dev/pts/2'/>
       <target type='isa-serial' port='0'>
         <model name='isa-serial'/>
       </target>
       <alias name='serial0'/>
     </serial>
-    <console type='pty' tty='/dev/pts/1'>
-      <source path='/dev/pts/1'/>
+
+    <console type='pty' tty='/dev/pts/2'>
+      <source path='/dev/pts/2'/>
       <target type='serial' port='0'/>
       <alias name='serial0'/>
     </console>
--->
+  -->
 
     <input type='mouse' bus='ps2'>
       <alias name='input0'/>
@@ -153,14 +126,14 @@
     </input>
     <memballoon model='virtio'>
       <alias name='balloon0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
     </memballoon>
   </devices>
 
 <!--
   <seclabel type='dynamic' model='selinux' relabel='yes'>
-    <label>system_u:system_r:svirt_t:s0:c647,c710</label>
-    <imagelabel>system_u:object_r:svirt_image_t:s0:c647,c710</imagelabel>
+    <label>system_u:system_r:svirt_t:s0:c812,c941</label>
+    <imagelabel>system_u:object_r:svirt_image_t:s0:c812,c941</imagelabel>
   </seclabel>
   <seclabel type='dynamic' model='dac' relabel='yes'>
     <label>+0:+0</label>

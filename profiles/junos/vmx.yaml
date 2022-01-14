@@ -17,4 +17,3 @@ vms:
       - metadata-usb-fpc0.img
 vnets:
   - name: int
-    template: networks/default.xml
