@@ -19,4 +19,4 @@
 - name: define VMs
   community.libvirt.virt:
     command: define
-    xml: '{{ lookup("template", "../{{ local_path.templates }}/{{ vm.template }}") }}'
+    xml: '{{ lookup("template", "{{ local_path.templates }}/{{ vm.template }}") }}'

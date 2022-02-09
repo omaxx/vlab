@@ -16,9 +16,12 @@
     <acpi/>
     <apic/>
   </features>
-  <cpu mode='custom' match='exact' check='full'>
+  <cpu mode='host-model'>
+     <model fallback='forbid'/>
     <!--
+  <cpu mode='custom' match='exact' check='full'>
     <model fallback='forbid'>Broadwell-IBRS</model>
+    <model fallback='forbid'>IvyBridge</model>
     <vendor>Intel</vendor>
     <feature policy='require' name='vme'/>
     <feature policy='require' name='ss'/>

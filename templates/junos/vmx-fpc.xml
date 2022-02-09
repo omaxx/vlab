@@ -16,9 +16,12 @@
     <acpi/>
     <apic/>
   </features>
-  <cpu mode='custom' match='exact' check='full'>
+  <cpu mode='host-model'>
+     <model fallback='forbid'/>
     <!--
+  <cpu mode='custom' match='exact' check='full'>
     <model fallback='forbid'>Broadwell-IBRS</model>
+    <model fallback='forbid'>IvyBridge</model>
     <feature policy='disable' name='hle'/>
     <feature policy='disable' name='rtm'/>
     <feature policy='require' name='hypervisor'/>

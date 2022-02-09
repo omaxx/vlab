@@ -5,7 +5,7 @@
 
 - name: load profile
   include_vars:
-    file: "../{{ local_path.profiles }}/{{ device.profile }}.yaml"
+    file: "{{ local_path.profiles }}/{{ device.profile }}.yaml"
 
 - name: define VMs
   include_tasks: vm-deploy.yaml
@@ -18,7 +18,7 @@
   community.libvirt.virt_net:
     command: define
     name: "{{ device.name }}-{{ vnet.name }}"
-    xml: '{{ lookup("template", "../{{ local_path.templates }}/networks/internal.xml") }}'
+    xml: '{{ lookup("template", "{{ local_path.templates }}/networks/internal.xml") }}'
   loop: "{{ vnets }}"
   loop_control:
     loop_var: vnet
@@ -29,7 +29,7 @@
   community.libvirt.virt_net:
     command: define
     name: "{{ interface.network }}"
-    xml: '{{ lookup("template", "../{{ local_path.templates }}/networks/point2point.xml") }}'
+    xml: '{{ lookup("template", "{{ local_path.templates }}/networks/point2point.xml") }}'
   loop: "{{ device.interfaces }}"
   loop_control:
     loop_var: interface
