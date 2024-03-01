@@ -1,0 +1,59 @@
+- block:
+  - name: Create management network
+    ansible.builtin.template:
+      src: interfaces/mgmt.conf.j2
+      dest: /etc/network/interfaces.d/mgmt.conf
+      mode: 0644
+    register: network
+
+  - name: Restart networking
+    ansible.builtin.service:
+      name: networking
+      state: restarted
+    when: network.changed
+
+  - name: Install packages
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      update_cache: yes
+      cache_valid_time: 86400
+      install_recommends: false
+    loop:
+      - isc-dhcp-server
+      - apache2
+  
+  when: "ansible_distribution in ['Debian', 'Ubuntu']"
+
+- block:
+  - name: Configure dhcp server
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+      mode: 0644
+    with_items:
+      - src: dhcp/isc-dhcp-server.j2
+        dest: /etc/default/isc-dhcp-server
+      - src: dhcp/dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+    register: dhcp
+
+  - name: Restart dhcp server
+    ansible.builtin.service:
+      name: isc-dhcp-server
+      state: restarted
+    when: dhcp.changed
+
+- block:
+  - ansible.builtin.file:
+      path: /var/www/html/index.html
+      state: absent
+
+  - ansible.builtin.file:
+      path: /var/www/html/vlab/config/
+      state: directory
+
+  - ansible.builtin.template:
+      src: "config/{{ item }}.j2"
+      dest: "/var/www/html/vlab/config/{{ item }}"
+    with_items: 
+      - juniper.conf

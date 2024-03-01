@@ -1,0 +1,19 @@
+images: junos/vmx/23.2R1
+vms:
+  - name: re
+    template: junos/vmx-re.xml.j2
+    vcpu: 1
+    memory: 1024
+    images:
+      - junos-vmx-x86-64-23.2R1.13.qcow2
+      - vmxhdd.img
+      - metadata-usb-re0.img
+  - name: fpc
+    template: junos/vmx-fpc.xml.j2
+    vcpu: 3
+    memory: 4096
+    images:
+      - vFPC-20230502.img
+      - metadata-usb-fpc0.img
+vnets:
+  - name: int

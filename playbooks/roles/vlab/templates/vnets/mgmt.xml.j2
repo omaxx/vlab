@@ -1,0 +1,13 @@
+<network>
+  <name>mgmt</name>
+  <forward mode='route'/>
+  <bridge name='mgmt' stp='off' delay='0'/>
+  <ip 
+    address="{{ vlab_mgmt_net | ansible.utils.ipaddr(-2) | ansible.utils.ipaddr('address') }}" 
+    netmask="{{ vlab_mgmt_net | ansible.utils.ipaddr('netmask') }}"
+  >
+    {# <dhcp>
+      <range start='172.31.10.1' end='172.31.10.128'/>
+    </dhcp> #}
+  </ip>
+</network>

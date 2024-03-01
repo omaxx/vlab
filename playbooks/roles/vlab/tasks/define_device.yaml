@@ -1,0 +1,34 @@
+- name: Debug
+  ansible.builtin.debug:
+    var: device
+
+- name: Load profile
+  ansible.builtin.include_vars:
+    file: "profiles/{{ device.profile }}.yaml"
+
+- name: Define internal VNets
+  community.libvirt.virt_net:
+    name: "{{ device.name }}-{{ vnet.name }}"
+    xml: '{{ lookup("template", "templates/vnets/internal.xml.j2") }}'
+    state: present
+  loop: "{{ vnets | d([]) }}"
+  loop_control:
+    loop_var: vnet
+    label: "{{ vnet.name }}"
+
+- name: Define p2p VNets
+  community.libvirt.virt_net:
+    name: "{{ interface.network }}"
+    xml: '{{ lookup("template", "templates/vnets/p2p.xml.j2") }}'
+    state: present
+  loop: "{{ device.interfaces | selectattr('network', 'defined')}}"
+  loop_control:
+    loop_var: interface
+    label: "{{ interface.network }}"
+
+- name: Define VMs
+  ansible.builtin.include_tasks: define_vm.yaml
+  loop: "{{ vms }}"
+  loop_control:
+    loop_var: vm
+    label: "{{ vm.name | d('default') }}"

@@ -1,0 +1,41 @@
+- name: Make .ssh/config.d folder
+  ansible.builtin.file:
+    path: ".ssh/config.d"
+    state: directory
+
+- name: Include .ssh/config.d in .ssh/config
+  ansible.builtin.lineinfile:
+    path: ".ssh/config"
+    line: "Include config.d/*\n"
+    regexp: "Include config.d\/*"
+    insertbefore: BOF
+    create: true
+
+- name: Add devices to .ssh/config
+  ansible.builtin.template:
+    src: ssh/config.j2
+    dest: ".ssh/config.d/vlab"
+
+
+- name: Make .ssh/config.d folder
+  ansible.builtin.file:
+    path: "{{ lookup('env','HOME') }}/.ssh/config.d"
+    state: directory
+  delegate_to: localhost
+  run_once: true
+
+- name: Include .ssh/config.d in .ssh/config
+  ansible.builtin.lineinfile:
+    path: "{{ lookup('env','HOME') }}/.ssh/config"
+    line: "Include config.d/*\n"
+    regexp: "Include config.d\/*"
+    insertbefore: BOF
+    create: true
+  delegate_to: localhost
+  run_once: true
+
+- name: Add devices to .ssh/config
+  ansible.builtin.template:
+    src: ssh/local.config.j2
+    dest: "{{ lookup('env','HOME') }}/.ssh/config.d/{{ inventory_hostname }}.vlab"
+  delegate_to: localhost

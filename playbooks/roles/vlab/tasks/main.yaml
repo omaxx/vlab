@@ -1,0 +1,37 @@
+- name: Load topology
+  ansible.builtin.include_vars:
+    file: "{{ inventory_dir }}/vlab/topologies/{{ vlab_topology }}.yaml"
+  tags: always
+
+- name: Install KVM
+  ansible.builtin.import_tasks: install_kvm.yaml
+  become: true
+  tags: install
+
+- name: Install management soft
+  ansible.builtin.import_tasks: install_mgmt.yaml
+  become: true
+  tags: install
+
+- name: Create vlab folder
+  ansible.builtin.file:
+    path: "{{ vlab_path }}"
+    state: directory
+  become: true
+
+- name: Define devices
+  ansible.builtin.include_tasks: tasks/define_device.yaml
+  loop: "{{ devices }}"
+  loop_control:
+    loop_var: device
+    label: "{{ device.name }}"
+
+- name: Setup access
+  ansible.builtin.import_tasks: setup_access.yaml
+
+- name: Start devices
+  ansible.builtin.include_tasks: tasks/start_device.yaml
+  loop: "{{ devices }}"
+  loop_control:
+    loop_var: device
+    label: "{{ device.name }}"

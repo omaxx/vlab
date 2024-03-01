@@ -1,0 +1,139 @@
+<domain type='kvm'>
+  <name>{{ device.name }}-{{ vm.name }}</name>
+  <memory unit='MiB'>{{ vm.memory }}</memory>
+  <vcpu placement='static'>{{ vm.vcpu }}</vcpu>
+  <resource>
+    <partition>/machine</partition>
+  </resource>
+  <sysinfo type='smbios'>
+    <bios>
+      <entry name='vendor'>Juniper</entry>
+    </bios>
+    <system>
+      <entry name='manufacturer'>VMX</entry>
+      <entry name='product'>VM-{{ device.name }}-161-re-0</entry>
+      <entry name='version'>0.1.0</entry>
+    </system>
+  </sysinfo>
+  <os>
+    <smbios mode='sysinfo'/>
+    <type arch='x86_64' machine='pc'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ vlab_path }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[0] }}'/>
+      <target dev='hda' bus='ide'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+    </disk>
+
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ vlab_path }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[1] }}'/>
+      <target dev='hdb' bus='ide'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+    </disk>
+
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source file='{{ vlab_path }}/{{ device.name }}/{{ vm.name }}/{{ vm.images[2] }}'/>
+      <target dev='hdc' bus='ide'/>
+      <address type='drive' controller='0' bus='1' target='0' unit='0'/>
+    </disk>
+
+    <controller type='usb' index='0' model='ich9-ehci1'>
+      <alias name='usb'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x7'/>
+    </controller>
+
+    <controller type='usb' index='0' model='ich9-uhci1'>
+      <alias name='usb'/>
+      <master startport='0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0' multifunction='on'/>
+    </controller>
+
+    <controller type='usb' index='0' model='ich9-uhci2'>
+      <alias name='usb'/>
+      <master startport='2'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x1'/>
+    </controller>
+
+    <controller type='usb' index='0' model='ich9-uhci3'>
+      <alias name='usb'/>
+      <master startport='4'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x2'/>
+    </controller>
+
+    <controller type='pci' index='0' model='pci-root'>
+      <alias name='pci.0'/>
+    </controller>
+
+    <controller type='ide' index='0'>
+      <alias name='ide'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+    </controller>
+
+    <interface type='bridge'>
+      <mac address='{{ vlab_mac_prefix }}:{{ device.id }}:10:01'/>
+      <source bridge='mgmt'/>
+      <target dev='{{ device.name}}-{{ vm.name }}-mgmt'/>
+      <model type='virtio'/>
+    </interface>
+
+    <interface type='network'>
+      <source network='{{ device.name }}-int'/>
+      <target dev='{{ device.name}}-{{ vm.name }}-int'/>
+      <model type='virtio'/>
+    </interface>
+
+    <serial type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='{{ vlab_console_port + device.id }}'/>
+      <protocol type='telnet'/>
+      <target port='0'/>
+    </serial>
+    <console type='tcp'>
+      <source mode='bind' host='0.0.0.0' service='{{ vlab_console_port + device.id }}'/>
+      <protocol type='telnet'/>
+      <target type='serial' port='0'/>
+    </console>
+
+    <input type='mouse' bus='ps2'>
+      <alias name='input0'/>
+    </input>
+    <input type='keyboard' bus='ps2'>
+      <alias name='input1'/>
+    </input>
+    <audio id='1' type='none'/>
+    <memballoon model='virtio'>
+      <alias name='balloon0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </memballoon>
+  </devices>
+</domain>
+

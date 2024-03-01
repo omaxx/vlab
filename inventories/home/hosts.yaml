@@ -1,7 +1,0 @@
-all:
-  children:
-    vlab:
-      hosts:
-        omega:
-          ansible_host: 172.31.0.8
-          ansible_user: maxim

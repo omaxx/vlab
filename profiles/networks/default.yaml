@@ -1,2 +1,0 @@
-vnets:
-  - template: networks/default.xml

@@ -1,0 +1,8 @@
+vlab_path: /var/vlab
+vlab_images_path: /mnt/soft
+
+vlab_console_port: 8600
+
+vlab_mac_prefix: "aa:bb:cc"
+
+vlab_mgmt_net: 192.168.1.0/24

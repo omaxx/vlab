@@ -1,0 +1,5 @@
+- name: Build vLab
+  hosts: vlab
+  roles:
+    - vlab
+    

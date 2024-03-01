@@ -1,0 +1,8 @@
+{% for device in devices %}
+Host {{ inventory_hostname }}.{{ device.name }}
+    Hostname {{ vlab_mgmt_net | ansible.utils.ipaddr(device.id) | ansible.utils.ipaddr('address') }}
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump {{ ansible_host }}
+
+{% endfor %}

@@ -1,0 +1,29 @@
+- name: Debug
+  ansible.builtin.debug:
+    var: vm
+
+- name: Create VM folder
+  ansible.builtin.file:
+    path: "{{ vlab_path }}/{{ device.name }}/{{ vm.name | d('') }}"
+    state: directory
+  become: true
+
+- name: Copy images
+  ansible.builtin.copy:
+    src: "{{ vlab_images_path }}/{{ images }}/{{ item }}"
+    dest: "{{ vlab_path }}/{{ device.name }}/{{ vm.name | d('') }}"
+    remote_src: yes
+    force: no
+  loop: "{{ vm.images }}"
+  become: true
+
+- name: List VMs
+  community.libvirt.virt:
+    command: list_vms
+  register: vm_list
+
+- name: Define VM
+  community.libvirt.virt:
+    command: define
+    xml: '{{ lookup("template", "templates/vms/{{ vm.template }}") }}'
+  # when: "device.name + '-' + vm.name not in vm_list.list_vms"

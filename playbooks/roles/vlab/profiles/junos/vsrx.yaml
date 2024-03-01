@@ -1,0 +1,7 @@
+images: junos/vsrx/21.4R3-S4
+vms:
+  - template: junos/vsrx.xml.j2
+    vcpu: 2
+    memory: 4096
+    images:
+      - junos-media-vsrx-x86-64-vmdisk-21.4R3-S4.9.qcow2

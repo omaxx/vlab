@@ -1,7 +1,0 @@
-path:
-  images: images
-  # vlab path should be absolute
-  vlab: /home/maxim/vlab
-port:
-  vnc: 9000
-  console: 8600

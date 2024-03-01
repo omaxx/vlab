@@ -1,0 +1,17 @@
+images: junos/vqfx/20.2
+vms:
+  - name: re
+    template: junos/vqfx-re.xml.j2
+    vcpu: 1
+    memory: 1024
+    images:
+      - vqfx-20.2R1.10-re-qemu.qcow2
+  - name: pfe
+    template: junos/vqfx-pfe.xml.j2
+    vcpu: 1
+    memory: 2048
+    images:
+      - vqfx-20.2R1-2019010209-pfe-qemu.qcow
+vnets:
+  - name: int
+  - name: res

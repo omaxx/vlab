@@ -1,0 +1,15 @@
+- name: Start p2p VNets
+  community.libvirt.virt_net:
+    name: "{{ interface.network }}"
+    state: active
+
+- name: Check protocols for p2p VNets
+  ansible.builtin.shell: "cat /sys/class/net/{{ interface.network }}/bridge/group_fwd_mask"
+  register: network_fwd_mask
+  changed_when: false
+
+- name: Enable protocols for p2p VNets
+  ansible.builtin.shell: "echo 0x4000 >/sys/class/net/{{ interface.network }}/bridge/group_fwd_mask"
+  when: "network_fwd_mask.stdout != '0x4000'"
+  become: true
+

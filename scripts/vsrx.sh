@@ -1,20 +1,29 @@
+#!/bin/bash
+set -e
 
-virt-install --name H11 \
-             --ram 4096 \
-             --vcpus=2 \
-             --arch=x86_64 \
-             --disk path=/var/lib/libvirt/images/H11.qcow2,size=16,device=disk,bus=ide,format=qcow2 \
-             --import \
-             --network=network:default,model=virtio \
-             --network=network:default,model=virtio \
-             --network=network:default,model=virtio &
+export VLAB=/var/vlab
 
-virt-install --name SRX \
-            --ram 4096 \
-            --vcpus=2 \
-            --arch=x86_64 \
-            --disk path=/var/lib/libvirt/images/SRX/media-vsrx-vmdisk-15.1X49-D150.2.qcow \
-            --import \
-            --network=network:default,model=virtio \
-            --network=network:default,model=virtio \
-            --network=network:default,model=virtio &
+test -d ${VLAB} || sudo mkdir ${VLAB}
+
+export DEV=vsrx-1
+
+sudo mkdir ${VLAB}/${DEV}
+
+export IMG=/mnt/soft/junos/vsrx/21.4R3-S4
+
+echo "copy ${DEV} images"
+sudo rsync -ah --progress ${IMG}/junos-media-vsrx-x86-64-vmdisk-21.4R3-S4.9.qcow2 ${VLAB}/${DEV}
+
+virt-install \
+    --name ${DEV} \
+    --osinfo detect=on,require=off \
+    --vcpus=2 \
+    --memory 4096 \
+    --import \
+    --disk path=${VLAB}/${DEV}/junos-media-vsrx-x86-64-vmdisk-21.4R3-S4.9.qcow2,bus=ide,format=qcow2 \
+    --network=bridge:vmbr0,model=virtio \
+    --network=bridge:vmbr0,model=virtio \
+    --network=bridge:vmbr0,model=virtio \
+    --network=bridge:vmbr0,model=virtio \
+    --graphics none \
+    &

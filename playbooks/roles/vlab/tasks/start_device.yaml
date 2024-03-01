@@ -1,0 +1,26 @@
+- name: Load profile
+  ansible.builtin.include_vars:
+    file: "profiles/{{ device.profile }}.yaml"
+
+- name: Start internal VNets
+  community.libvirt.virt_net:
+    state: active
+    name: "{{ device.name }}-{{ vnet.name }}"
+  loop: "{{ vnets | d([]) }}"
+  loop_control:
+    loop_var: vnet
+    label: "{{ vnet.name }}"
+
+- name: Start p2p VNets
+  ansible.builtin.include_tasks: start_vnet.yaml
+  loop: "{{ device.interfaces | selectattr('network', 'defined')}}"
+  loop_control:
+    loop_var: interface
+    label: "{{ interface.network }}"
+
+- name: Start VMs
+  ansible.builtin.include_tasks: start_vm.yaml
+  loop: "{{ vms }}"
+  loop_control:
+    loop_var: vm
+    label: "{{ vm.name|default('') }}"

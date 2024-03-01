@@ -1,7 +1,0 @@
-images: junos/vsrx/
-vms:
-  - template: junos/vsrxv2.xml
-    vcpu: 2
-    memory: 4096
-    images:
-      -

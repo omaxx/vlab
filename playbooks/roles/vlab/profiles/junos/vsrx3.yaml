@@ -1,0 +1,7 @@
+images: junos/vsrx3
+vms:
+  - template: junos/vsrx3.xml.j2
+    vcpu: 2
+    memory: 4096
+    images:
+      - junos-vsrx3-x86-64-23.2R1-S2.5.qcow2

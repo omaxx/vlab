@@ -1,0 +1,11 @@
+- name: Start VM
+  community.libvirt.virt:
+    name: "{{ device.name }}-{{ vm.name }}"
+    state: running
+  when: "'name' in vm"
+
+- name: Start VM
+  community.libvirt.virt:
+    name: "{{ device.name }}"
+    state: running
+  when: "'name' not in vm"

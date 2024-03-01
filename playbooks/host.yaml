@@ -1,0 +1,5 @@
+- name: Setup vLab host
+  hosts: vlab
+  roles:
+    - kvm
+    

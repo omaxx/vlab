@@ -1,0 +1,6 @@
+{# /etc/network/interfaces.d/mgmt.conf #}
+auto mgmt
+iface mgmt inet static
+    bridge_ports none
+    bridge_stp off
+    address {{ vlab_mgmt_net | ansible.utils.ipaddr(-2) }}
