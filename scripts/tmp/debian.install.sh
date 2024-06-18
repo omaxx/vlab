@@ -26,6 +26,8 @@ virt-install \
     --vcpus=1 \
     --cdrom ${VLAB}/_boot_/${CDROM} \
     --disk size=10 \
+    --network=bridge:mgmt,model=virtio \
+    --network=bridge:srv1,model=virtio \
     --network=bridge:vmbr0,model=virtio \
     --graphics vnc,port=590${ID},listen=0.0.0.0 \
     &

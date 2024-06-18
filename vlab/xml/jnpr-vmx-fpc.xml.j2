@@ -1,0 +1,110 @@
+{# junos/vmx/23.2R2.21/scripts/templates/_vPFE-ref.xml #}
+
+<domain type='kvm'>
+    <name>{{ vm.name }}</name>
+    <memory unit='MiB'>{{ vm.memory }}</memory>
+
+    {# <memoryBacking>
+        <nosharepages/>
+        <hugepages/>
+    </memoryBacking> #}
+
+    <vcpu placement='static'>{{ vm.vcpu }}</vcpu>
+    {# <numatune>
+        <memory mode='preferred' nodeset='0'/>
+    </numatune> #}
+    <os>
+        {# <type arch='x86_64' machine='pc-i440fx-trusty'>hvm</type> #}
+        <type arch='x86_64' machine='pc'>hvm</type>
+        <boot dev='hd'/>
+    </os>
+    <features>
+        <acpi/>
+    </features>
+    <cpu mode='host-model'>
+        <topology sockets='1' cores='{{ vm.vcpu }}' threads='1'/>
+    </cpu>
+    <clock offset='utc'/>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>restart</on_crash>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+        <disk type='file' device='disk'>
+            <driver name='qemu' type='raw' cache='directsync'/>
+            <source file='{{ vhost.path }}/{{ vm.path }}/{{ vm.images[0] }}'/>
+            <target dev='hda' bus='ide'/>
+        </disk>
+        {# <disk type='file' device='disk'>
+            <driver name='qemu' type='raw' cache='directsync'/>
+            <source file='{{ vhost.path }}/{{ vm.path }}/{{ vm.images[1] }}'/>
+            <target bus="virtio" dev="hdb" />
+        </disk> #}
+
+        <controller type='pci' index='0' model='pci-root'/>
+
+        {# <interface type='bridge' name='EXTERNAL_BRIDGE'> #}
+        {# <interface type='bridge'>
+            {% if vm.interfaces[0].mac is not none %}
+            <mac address='{{ vm.interfaces[0].mac }}'/>
+            {% endif %}
+            <source bridge='{{ vm.interfaces[0].bridge }}'/>
+            <target dev='{{ vm.name }}~mgmt'/>
+            <model type='virtio'/>
+        </interface>
+        <interface type='network'>
+            <source network='{{ vm.interfaces[1].network }}'/>
+            <target dev='{{ vm.name }}~int'/>
+            <model type='virtio'/>
+        </interface> #}
+
+    {% for interface in vm.interfaces %}
+        {% if interface.bridge is not none %}
+        <interface type='bridge'>
+            <source bridge='{{ interface.bridge }}'/>
+        {% endif %}
+        {% if interface.network is not none %}
+        <interface type='network'>
+            <source network='{{ interface.network }}'/>
+        {% endif %}
+
+            {% if interface.mac is not none %}
+            <mac address='{{ interface.mac }}'/>
+            {% endif %}
+            {% if interface.target is not none %}
+            <target dev='{{ interface.target }}'/>
+            {% endif %}
+            <model type='virtio'/>
+        </interface>
+    {% endfor %}
+
+    {% if vm.console is not none %}
+        <serial type='tcp'>
+            <source mode='bind' host='127.0.0.1' service='{{ vm.console }}'/>
+            <protocol type='telnet'/>
+            <target port='0'/>
+        </serial>
+        <console type='tcp'>
+            <source mode='bind' host='127.0.0.1' service='{{ vm.console }}'/>
+            <protocol type='telnet'/>
+            <target type='serial' port='0'/>
+        </console>
+    {% endif %}
+
+        {# <input type='tablet' bus='usb'/> #}
+        <input type='mouse' bus='ps2'/>
+        <input type='keyboard' bus='ps2'/>
+        <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+            <listen type='address' address='127.0.0.1'/>
+        </graphics>
+        {# <sound model='ac97'>
+        </sound> #}
+        <video>
+            <model type='cirrus' vram='9216' heads='1'/>
+        </video>
+        <memballoon model='virtio'>
+        </memballoon>
+    </devices>
+</domain>
+

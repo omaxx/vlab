@@ -1,0 +1,11 @@
+vlab_mgmt_ip: 192.168.0.254/24
+
+vlab_mac_prefix: "c0:ff:ee"
+
+vlab_root_pass: "$6$fNNqM5jX$jWvF5QHcF.iOq6izZEM/EW1knOa95u5fv/RJOC0eczZby.Klv1SK6KHI0I3k267T85iIzr3vXRu7KBLzbwIba."
+vlab_user_name: "{{ ansible_user | d(lookup('env', 'USER')) }}"
+vlab_user_pass: "$6$fNNqM5jX$jWvF5QHcF.iOq6izZEM/EW1knOa95u5fv/RJOC0eczZby.Klv1SK6KHI0I3k267T85iIzr3vXRu7KBLzbwIba."
+vlab_user_rsa_pub: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVflN8friZ1wjC2eEetBfyprfmrOfUhmMNhBiJxEZhUOKXzeK9jTNlDJR+FLqqMpjS+vp5pSL4A2mV1EDyQvDYLRKnQv4+gFJf+qY+2pMg5AiX2xQflJNJgCUrFnfRQVc9kdrcQU8Ov5VB86b9bm+ulBCyQCQI6XUSGDJ6WZFv9Qs+y8gTUkg7d3me/VQ3QVmrMkCTfC4ooNVHo2cemezWAduLLPOpBtlRiPvkwaChy+iN4462PguxNAL/pYQzAw20lwJfGfBWbbEtbNjD8jc4aUwC/VRKkVanuThxJVsplVZnUSziLfY/IHEzG84hisubVyrH1whkZUOaER/vh18Z maxx.orlov@gmail.com"
+
+vlab_syslog_ip: "{{ vlab_mgmt_ip | ansible.utils.ipaddr('address') }}"
+vlab_syslog_port: 5141

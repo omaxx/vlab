@@ -18,7 +18,6 @@
   <os>
     <smbios mode='sysinfo'/>
     <type arch='x86_64' machine='pc-0.13'>hvm</type>
-    <!-- <type arch='x86_64' machine='pc-i440fx-rhel7.0.0'>hvm</type> -->
     <boot dev='hd'/>
   </os>
   <features>

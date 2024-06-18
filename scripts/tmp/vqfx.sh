@@ -49,7 +49,7 @@ virt-install \
     --vcpus=1 \
     --import \
     --disk path=${VLAB}/${DEV}/re/vqfx-20.2R1.10-re-qemu.qcow2,bus=ide,format=qcow2 \
-    --network=bridge:vmbr0,model=virtio \
+    --network=bridge:mgmt,model=virtio \
     --network=network:${DEV}-int,model=virtio \
     --network=network:${DEV}-res,model=virtio \
     --graphics none \
@@ -63,7 +63,7 @@ virt-install \
     --vcpus=1 \
     --import \
     --disk path=${VLAB}/${DEV}/pfe/vqfx-20.2R1-2019010209-pfe-qemu.qcow \
-    --network=bridge:vmbr0,model=virtio \
+    --network=bridge:mgmt,model=virtio \
     --network=network:${DEV}-int,model=virtio \
     --network=network:${DEV}-res,model=virtio \
     --network=bridge:vmbr0,model=virtio \

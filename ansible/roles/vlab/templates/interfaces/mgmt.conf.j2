@@ -1,0 +1,6 @@
+{# /etc/network/interfaces.d/mgmt.conf #}
+auto mgmt
+iface mgmt inet static
+    bridge-ports none
+    bridge-stp off
+    address {{ vlab_mgmt_ip }}

@@ -1,0 +1,544 @@
+{
+   "devices": [
+      {
+         "name": "r1",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r1~re0",
+               "path": "r1/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R1_R9"
+                  },
+                  {
+                     "network": "R1_R2"
+                  },
+                  {
+                     "network": "R1_R3"
+                  },
+                  {
+                     "network": "R1_R4"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r1~fpc0",
+               "path": "r1/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r1~int"
+            }
+         ]
+      },
+      {
+         "name": "r2",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r2~re0",
+               "path": "r2/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R1_R2"
+                  },
+                  {
+                     "network": "R2_R3"
+                  },
+                  {
+                     "network": "R2_R8"
+                  },
+                  {
+                     "network": "R2_R5"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r2~fpc0",
+               "path": "r2/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r2~int"
+            }
+         ]
+      },
+      {
+         "name": "r3",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r3~re0",
+               "path": "r3/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R2_R3"
+                  },
+                  {
+                     "network": "R3_R4"
+                  },
+                  {
+                     "network": "R3_R7"
+                  },
+                  {
+                     "network": "R3_R7"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r3~fpc0",
+               "path": "r3/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r3~int"
+            }
+         ]
+      },
+      {
+         "name": "r4",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r4~re0",
+               "path": "r4/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R3_R4"
+                  },
+                  {
+                     "network": "R4_R5"
+                  },
+                  {
+                     "network": "R1_R4"
+                  },
+                  {
+                     "network": "R4_R6"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r4~fpc0",
+               "path": "r4/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r4~int"
+            }
+         ]
+      },
+      {
+         "name": "r5",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r5~re0",
+               "path": "r5/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R4_R5"
+                  },
+                  {
+                     "network": "R5_R6"
+                  },
+                  {
+                     "network": "R2_R5"
+                  },
+                  {
+                     "network": "R5_R8"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r5~fpc0",
+               "path": "r5/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r5~int"
+            }
+         ]
+      },
+      {
+         "name": "r6",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r6~re0",
+               "path": "r6/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R5_R6"
+                  },
+                  {
+                     "network": "R6_R7"
+                  },
+                  {
+                     "network": "R4_R6"
+                  },
+                  {
+                     "network": "R6_R9"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r6~fpc0",
+               "path": "r6/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r6~int"
+            }
+         ]
+      },
+      {
+         "name": "r7",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r7~re0",
+               "path": "r7/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R6_R7"
+                  },
+                  {
+                     "network": "R7_R8"
+                  },
+                  {
+                     "network": "R7_R9"
+                  },
+                  {
+                     "network": "R3_R7"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r7~fpc0",
+               "path": "r7/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r7~int"
+            }
+         ]
+      },
+      {
+         "name": "r8",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r8~re0",
+               "path": "r8/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R7_R8"
+                  },
+                  {
+                     "network": "R8_R9"
+                  },
+                  {
+                     "network": "R5_R8"
+                  },
+                  {
+                     "network": "R2_R8"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r8~fpc0",
+               "path": "r8/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r8~int"
+            }
+         ]
+      },
+      {
+         "name": "r9",
+         "vms": [
+            {
+               "images": [
+                  {
+                     "path": "junos-vmx-x86-64-23.2R2.21.qcow2"
+                  },
+                  {
+                     "path": "vmxhdd.img"
+                  },
+                  {
+                     "path": "metadata-usb-re0.img"
+                  }
+               ],
+               "interfaces": [ ],
+               "memory": 1024,
+               "name": "r9~re0",
+               "path": "r9/re0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 1,
+               "xml": "jnpr-vmx-re"
+            },
+            {
+               "images": [
+                  {
+                     "path": "vFPC-20240301.img"
+                  },
+                  {
+                     "path": "metadata-usb-fpc0.img"
+                  }
+               ],
+               "interfaces": [
+                  {
+                     "network": "R8_R9"
+                  },
+                  {
+                     "network": "R1_R9"
+                  },
+                  {
+                     "network": "R6_R9"
+                  },
+                  {
+                     "network": "R7_R9"
+                  }
+               ],
+               "memory": 2048,
+               "name": "r9~fpc0",
+               "path": "r9/fpc0",
+               "src": "junos/vmx/23.2R2/images",
+               "vcpu": 3,
+               "xml": "jnpr-vmx-fpc"
+            }
+         ],
+         "vnets": [
+            {
+               "name": "r9~int"
+            }
+         ]
+      }
+   ]
+}

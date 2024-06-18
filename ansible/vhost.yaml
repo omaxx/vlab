@@ -1,0 +1,5 @@
+- hosts: vlab
+  roles:
+    - name: vlab
+      tags: setup
+    

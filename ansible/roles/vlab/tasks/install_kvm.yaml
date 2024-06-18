@@ -1,0 +1,81 @@
+- block:
+  - name: Install qemu/kvm packages
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      update_cache: yes
+      cache_valid_time: 86400
+      install_recommends: false
+    loop:
+      - qemu-system
+      - libvirt-daemon-system
+      - libvirt-clients
+      - bridge-utils
+      - dnsmasq
+
+  - name: Install additional packages
+    ansible.builtin.apt:
+      name: "{{ item }}"
+      update_cache: yes
+      cache_valid_time: 86400
+      install_recommends: false
+    loop:
+      - python3-libvirt
+      - python3-lxml
+  when: "ansible_distribution in ['Debian', 'Ubuntu']"
+
+- block:
+  - name: Install Extra Packages for Enterprise Linux
+    ansible.builtin.dnf: 
+      name: epel-release
+
+  - name: Install qemu/kvm packages
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+    loop:
+      - qemu-kvm
+      - libvirt
+      - bridge-utils
+      - dnsmasq
+
+  - name: Install additional packages
+    ansible.builtin.dnf:
+      name: "{{ item }}"
+    loop:
+      - python3-libvirt
+      - python3-lxml
+
+  - name: Disable firewall
+    ansible.builtin.service:
+      name: firewalld
+      state: stopped
+      enabled: false
+  when: "ansible_distribution in ['RedHat', 'Rocky']"
+
+- name: Enable libvirtd.socket
+  ansible.builtin.service:
+    name: libvirtd.socket
+    state: started
+    enabled: true
+
+- name: Add user to groups
+  ansible.builtin.user:
+    name: "{{ ansible_user | d(lookup('env', 'USER')) }}"
+    append: yes
+    groups:
+      - libvirt
+
+- name: Copy management script
+  ansible.builtin.copy:
+    src: vlab
+    dest: /usr/local/bin/vlab
+    owner: root
+    group: root
+    mode: '0755'
+
+# - name: Allow hugepages
+#   ansible.posix.sysctl:
+#     name: vm.nr_overcommit_hugepages
+#     state: present
+#     value: 8192
+#     reload: yes
+

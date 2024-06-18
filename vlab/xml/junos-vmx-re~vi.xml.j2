@@ -1,0 +1,108 @@
+<domain type='kvm'>
+    <name>{{ vm.name }}</name>
+    <memory unit='MiB'>{{ vm.memory }}</memory>
+    <vcpu placement='static'>{{ vm.vcpu }}</vcpu>
+    <resource>
+        <partition>/machine</partition>
+    </resource>
+
+    <os>
+        <type arch='x86_64' machine='pc-i440fx-7.2'>hvm</type>
+        <boot dev='hd'/>
+        <smbios mode='sysinfo'/>
+    </os>
+    <sysinfo type='smbios'>
+        <bios>
+            <entry name='vendor'>Juniper</entry>
+        </bios>
+        <system>
+            <entry name='manufacturer'>VMX</entry>
+            {# <entry name='product'>VM-name-161-re-0</entry> #}
+            <entry name='product'>VM-VMX</entry>
+            <entry name='version'>0.1.0</entry>
+        </system>
+    </sysinfo>
+
+    <features>
+        <acpi/>
+        <apic/>
+    </features>
+    <cpu mode='host-passthrough' check='none' migratable='on'/>
+    <clock offset='utc'>
+        <timer name='rtc' tickpolicy='catchup'/>
+        <timer name='pit' tickpolicy='delay'/>
+        <timer name='hpet' present='no'/>
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled='no'/>
+        <suspend-to-disk enabled='no'/>
+    </pm>
+
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+        <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='directsync'/>
+            <source file='{{ vm.path }}/{{ vm.images[0] }}'/>
+            <target bus="virtio" dev="vda" />
+        </disk>
+        <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='directsync'/>
+            <source file='{{ vm.path }}/{{ vm.images[1] }}'/>
+            <target bus="virtio" dev="vdb" />
+        </disk>
+        <disk type='file' device='disk'>
+            <driver name='qemu' type='raw' cache='directsync'/>
+            <source file='{{ vm.path }}/{{ vm.images[2] }}'/>
+            <target bus="virtio" dev="vdc" />
+        </disk>
+
+        <controller index="0" type="usb" model='none'/>
+        <controller type='pci' index='0' model='pci-root'/>
+
+        {# <interface type='bridge' name='EXTERNAL_BRIDGE'> #}
+        <interface type='bridge'>
+            <mac address='C0:FF:EE:{{ vm.device.id }}:{{ 10 + vm.slot }}:01'/>
+            <source bridge='mgmt'/>
+            <target dev='{{ vm.name }}~mgmt'/>
+            <model type='virtio'/>
+            <driver name='qemu'/>
+        </interface>
+
+        <interface type='network'>
+            <source network='{{ vm.device.name }}~int'/>
+            <target dev='{{ vm.name }}~int'/>
+            <model type='virtio'/>
+        </interface>
+
+        <serial type='tcp'>
+            <source mode='bind' host='127.0.0.1' service='{{ 8600 + vm.device.id + 100 * vm.slot }}'/>
+            <protocol type='telnet'/>
+            <target port='0'/>
+        </serial>
+        <console type='tcp'>
+            <source mode='bind' host='127.0.0.1' service='{{ 8600 + vm.device.id + 100 * vm.slot}}'/>
+            <protocol type='telnet'/>
+            <target type='serial' port='0'/>
+        </console>
+
+        <input type='mouse' bus='ps2'/>
+        <input type='keyboard' bus='ps2'/>
+        <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+            <listen type='address' address='127.0.0.1'/>
+        </graphics>
+        {# <sound model='ac97'>
+            <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+        </sound> #}
+        <video>
+            <model type='cirrus' vram='9216' heads='1'/>
+            <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+        </video>
+        <memballoon model='virtio'>
+            <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+        </memballoon>
+    </devices>
+</domain>

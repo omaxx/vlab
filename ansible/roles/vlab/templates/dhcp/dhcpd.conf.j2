@@ -1,0 +1,35 @@
+{# /etc/dhcp/dhcpd.conf #}
+option ztp-file-server code 150 = { ip-address };
+
+option space juniper;
+option juniper.image-file-name code 0 = text;
+option juniper.config-file-name code 1 = text;
+option juniper.image-file-type code 2 = text;
+option juniper.transfer-mode code 3 = text;
+option juniper.alt-image-file-name code 4 = text;
+option juniper.http-port code 5 = text;
+
+class "juniper" {
+    match if (substring(option vendor-class-identifier, 0, 7) = "Juniper");
+    vendor-option-space juniper;
+    option juniper.transfer-mode "http";
+    option juniper.config-file-name "vlab/config/juniper.conf";
+    option ztp-file-server {{ vlab_mgmt_ip | ansible.utils.ipaddr('address') }};
+}
+
+subnet {{ vlab_mgmt_ip | ansible.utils.ipaddr('network') }} netmask {{ vlab_mgmt_ip | ansible.utils.ipaddr('netmask') }} {
+    default-lease-time 600;
+    {# option routers {{ vlab_mgmt_net | ansible.utils.ipaddr(-2) | ansible.utils.ipaddr('address') }}; #}
+    pool {
+        range {{ vlab_mgmt_ip | ansible.utils.ipaddr(17) | ansible.utils.ipaddr('address')}} {{ vlab_mgmt_ip | ansible.utils.ipaddr(32) | ansible.utils.ipaddr('address')}};
+    }
+}
+
+{% for id in range(1, 16) %}
+
+host vm{{ id }} {
+    hardware ethernet {{ vlab_mac_prefix }}:{{ id }}:10:00;
+    fixed-address {{ vlab_mgmt_ip | ansible.utils.ipaddr(id) | ansible.utils.ipaddr('address')}};
+}
+
+{% endfor %}

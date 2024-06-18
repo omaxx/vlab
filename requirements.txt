@@ -1,0 +1,10 @@
+libvirt-python
+click
+Jinja2
+fabric
+PyYaml
+
+marshmallow
+marshmallow-dataclass
+typeguard
+rich

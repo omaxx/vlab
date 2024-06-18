@@ -7,11 +7,10 @@
   </memoryBacking>
   <vcpu placement='static'>16</vcpu>
   <numatune>
-    <memory mode='preferred' nodeset='0'/>
+    <memory mode='strict' nodeset='0'/>
   </numatune>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-trusty'>hvm</type>
-    <!-- <type arch='x86_64' machine='pc-i440fx-rhel7.0.0'>hvm</type> -->
+    <type arch='x86_64' machine='pc-i440fx-rhel7.0.0'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>

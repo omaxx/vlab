@@ -1,0 +1,82 @@
+system {
+    root-authentication {
+        encrypted-password "{{ vlab_root_pass }}"; ## SECRET-DATA
+    }
+    login {
+        user {{ vlab_user_name }} {
+            uid 2000;
+            class super-user;
+            authentication {
+                encrypted-password "{{ vlab_user_pass }}"; ## SECRET-DATA
+                ssh-rsa "{{ vlab_user_rsa_pub }}"; ## SECRET-DATA
+            }
+        }
+    }
+    services {
+        ssh;
+        netconf {
+            ssh;
+        }
+    }
+    syslog {
+        host {{ vlab_syslog_ip }} {
+            any info;
+            authorization any;
+            allow-duplicates;
+            port {{ vlab_syslog_port }};
+            structured-data;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+    }
+    processes {
+        dhcp-service {
+            traceoptions {
+                file dhcp_logfile size 10m;
+                level all;
+                flag packet;
+            }
+        }
+    }
+}
+{# for vmx: #}
+chassis {
+    fpc 0 {
+        lite-mode;
+    }
+}
+interfaces {
+    fxp0 {
+        unit 0 {
+            family inet dhcp;
+        }
+    }
+    em0 {
+        unit 0 {
+            family inet dhcp;
+        }
+    }
+    {# for vqfx: #}
+    em1 {
+        unit 0 {
+            family inet {
+                address 169.254.0.2/24;
+            }
+        }
+    }
+}
+snmp {
+    community public {
+        authorization read-only;
+    }
+}
+protocols {
+    lldp {
+        interface all;
+    }
+}
