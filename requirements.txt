@@ -1,6 +1,7 @@
 libvirt-python
 click
 Jinja2
+invoke
 fabric
 PyYaml
 

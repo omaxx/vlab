@@ -8,6 +8,7 @@ from importlib import resources
 
 import libvirt
 import fabric
+import invoke.exceptions
 from rich.console import Console
 import jinja2
 
@@ -20,8 +21,8 @@ jinja = jinja2.Environment(undefined=jinja2.StrictUndefined)
 
 
 class VHost:
-    PATH: ClassVar[str] = "/home/vlab"
-    IMAGES: ClassVar[str] = "/mnt/soft"
+    PATH: ClassVar[str] = "/var/vlab"
+    IMAGES: ClassVar[str] = "/var/soft"
 
     def __init__(
         self,
@@ -124,10 +125,15 @@ class VHost:
                         logger.warning(f"image {path / image.path} exist")
                     else:
                         logger.info(f"rsync {self.images / vm.src / image.path} to {path}")
-                        self.fabric.run(
-                            f"rsync -h --chmod=0664 {self.images / vm.src / image.path} {path}"
-                        )
-                        logger.info(f"rsync {self.images / vm.src / image.path} to {path}: DONE")
+                        try:
+                            self.fabric.run(
+                                f"rsync -h --chmod=0664 {self.images / vm.src / image.path} {path}",
+                                hide=True,
+                            )
+                            logger.info(f"rsync {self.images / vm.src / image.path} to {path}: DONE")
+                        except invoke.exceptions.UnexpectedExit as exc:
+                            logger.critical(f"{exc.__class__.__name__}: {exc}")
+                            raise SystemExit(1)
 
                 if vm.name in vms:
                     logger.warning(f"VM {vm.name} already exist")
@@ -243,11 +249,13 @@ class VHost:
                 if vm.name not in vms:
                     logger.warning(f"VM {vm.name} not exist")
                 else:
-                    if vms[vm.name].isActive():
+                    active, persistent = vms[vm.name].isActive(), vms[vm.name].isPersistent()
+                    if active:
                         vms[vm.name].destroy()
                         logger.info(f"VM {vm.name} stopped")
-                    vms[vm.name].undefine()
-                    logger.info(f"VM {vm.name} undefined")
+                    if persistent:
+                        vms[vm.name].undefine()
+                        logger.info(f"VM {vm.name} undefined")
 
                 if delete:
                     if self.fabric.run(f"test -d {self.path / vm.path}", warn=True).ok:
@@ -258,24 +266,50 @@ class VHost:
                 if vnet.name not in vnets:
                     logger.warning(f"VNet {vnet.name} not exist")
                 else:
-                    if vnets[vnet.name].isActive():
+                    active, persistent = vnets[vnet.name].isActive(), vnets[vnet.name].isPersistent()
+                    if active:
                         vnets[vnet.name].destroy()
                         logger.info(f"VNet {vnet.name} stopped")
-                    vnets[vnet.name].undefine()
-                    logger.info(f"VNet {vnet.name} undefined")
+                    if persistent:
+                        vnets[vnet.name].undefine()
+                        logger.info(f"VNet {vnet.name} undefined")
 
         for vnet in topology.vnets:
             if vnet.name not in vnets:
                 logger.warning(f"VNet {vnet.name} not exist")
             else:
-                if vnets[vnet.name].isActive():
+                active, persistent = vnets[vnet.name].isActive(), vnets[vnet.name].isPersistent()
+                if active:
                     vnets[vnet.name].destroy()
                     logger.info(f"VNet {vnet.name} stopped")
-                vnets[vnet.name].undefine()
-                logger.info(f"VNet {vnet.name} undefined")
+                if persistent:
+                    vnets[vnet.name].undefine()
+                    logger.info(f"VNet {vnet.name} undefined")
 
         if delete:
             self.fabric.run(
                 f'find {self.path} -type d -not -wholename "{self.path}"' ' -exec rm -rf {} +'
             )
             logger.info(f"vLAB deleted")
+
+    def clean(self, console: Optional[Console] = None):
+        vms = {vm.name(): vm for vm in self.qemu.listAllDomains(0)}
+        vnets = {vnet.name(): vnet for vnet in self.qemu.listAllNetworks(0)}
+
+        for vm in vms:
+            active, persistent = vm.isActive(), vm.isPersistent()
+            if active:
+                vm.destroy()
+                logger.info(f"VM {vm.name()} stopped")
+            if persistent:
+                vm.undefine()
+                logger.info(f"VM {vm.name()} undefined")
+
+        for vnet in vnets:
+            active, persistent = vnet.isActive(), vnet.isPersistent()
+            if active:
+                vnet.destroy()
+                logger.info(f"VM {vnet.name()} stopped")
+            if persistent:
+                vnet.undefine()
+                logger.info(f"VM {vnet.name()} undefined")
