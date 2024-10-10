@@ -26,7 +26,7 @@ class VHost:
 
     def __init__(
         self,
-        ip: Optional[str] = None,
+        ip: Optional[str],
         path: Union[str, Path, None] = None,
         images: Union[str, Path, None] = None,
     ):
@@ -63,7 +63,7 @@ class VHost:
             raise SystemExit(1)
 
     def __del__(self):
-        if self.qemu is not None:
+        if hasattr(self, "qemu") and self.qemu is not None:
             self.qemu.close()
 
     def fetch_state(self, topology: Topology, console: Optional[Console] = None):
@@ -75,7 +75,7 @@ class VHost:
                 if vm.name in vms:
                     vm.state = VM.State(vms[vm.name].state()[0])
                 else:
-                    vm.state = VM.State.ABSEND
+                    vm.state = VM.State.ABSENT
 
                 for image in vm.images:
                     image.exist = self.fabric.run(f"test -f {self.path / vm.path / image.path}", warn=True).ok
@@ -286,11 +286,11 @@ class VHost:
                     vnets[vnet.name].undefine()
                     logger.info(f"VNet {vnet.name} undefined")
 
-        if delete:
-            self.fabric.run(
-                f'find {self.path} -type d -not -wholename "{self.path}"' ' -exec rm -rf {} +'
-            )
-            logger.info(f"vLAB deleted")
+        # if delete:
+        #     self.fabric.run(
+        #         f'find {self.path} -type d -not -wholename "{self.path}"' ' -exec rm -rf {} +'
+        #     )
+        #     logger.info(f"vLAB deleted")
 
     def clean(self, console: Optional[Console] = None):
         vms = {vm.name(): vm for vm in self.qemu.listAllDomains(0)}

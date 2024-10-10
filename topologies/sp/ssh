@@ -1,0 +1,62 @@
+Host sp.bb11
+    Hostname 192.168.0.1
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.bb12
+    Hostname 192.168.0.2
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.bb21
+    Hostname 192.168.0.3
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.bb22
+    Hostname 192.168.0.4
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.pe11
+    Hostname 192.168.0.5
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.pe12
+    Hostname 192.168.0.6
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.pe21
+    Hostname 192.168.0.7
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.pe22
+    Hostname 192.168.0.8
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60
+
+Host sp.ce
+    Hostname 192.168.0.9
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    ProxyJump 172.31.0.8
+    ServerAliveInterval 60

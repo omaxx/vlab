@@ -11,9 +11,9 @@
         {# <type arch='x86_64' machine='pc-i440fx-7.2'>hvm</type> #}
         <type arch='x86_64' machine='pc'>hvm</type>
         <boot dev='hd'/>
-        <smbios mode='sysinfo'/>
+        {# <smbios mode='sysinfo'/> #}
     </os>
-    <sysinfo type='smbios'>
+    {# <sysinfo type='smbios'>
         <bios>
             <entry name='vendor'>Juniper</entry>
         </bios>
@@ -22,7 +22,7 @@
             <entry name='product'>VM-vcp_vmx1-161-re-0</entry>
             <entry name='version'>0.1.0</entry>
         </system>
-    </sysinfo>
+    </sysinfo> #}
 
     <features>
         <acpi/>
@@ -58,6 +58,7 @@
             <driver name='qemu' type='raw' cache='directsync'/>
             <source file='{{ vhost.path }}/{{ vm.path }}/{{ vm.images[2] }}'/>
             <target bus="virtio" dev="vdc" />
+            {# <target dev="sda" bus="usb" /> #}
         </disk>
 
         <controller index="0" type="usb" model='none'/>

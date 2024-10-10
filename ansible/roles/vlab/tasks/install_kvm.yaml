@@ -21,6 +21,7 @@
     loop:
       - python3-libvirt
       - python3-lxml
+      - rsync
   when: "ansible_distribution in ['Debian', 'Ubuntu']"
 
 - block:
@@ -43,6 +44,7 @@
     loop:
       - python3-libvirt
       - python3-lxml
+      - rsync
 
   - name: Disable firewall
     ansible.builtin.service:
@@ -64,13 +66,13 @@
     groups:
       - libvirt
 
-- name: Copy management script
-  ansible.builtin.copy:
-    src: vlab
-    dest: /usr/local/bin/vlab
-    owner: root
-    group: root
-    mode: '0755'
+# - name: Copy management script
+#   ansible.builtin.copy:
+#     src: vlab
+#     dest: /usr/local/bin/vlab
+#     owner: root
+#     group: root
+#     mode: '0755'
 
 # - name: Allow hugepages
 #   ansible.posix.sysctl:

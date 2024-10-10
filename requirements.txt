@@ -4,6 +4,7 @@ Jinja2
 invoke
 fabric
 PyYaml
+jsonnet
 
 marshmallow
 marshmallow-dataclass

@@ -1,87 +1,102 @@
-_vmx_: &vmx
-  images: "junos/vmx/23.4R1.7/images"
-  re_image: "junos-vmx-x86-64-23.4R1.7.qcow2"
-  fpc_image: "vFPC-20230926.img"
+_vmx_20_4R3_S10_2_: &vmx_20_4R3_S10_2
+  images: "junos/vmx/20.4R3-S10.2/images"
+  re_image: "junos-vmx-x86-64-20.4R3-S10.2.qcow2"
+  fpc_image: "vFPC-20220727.img"
+
+_vmx_23_2R2_S1_3_: &vmx_23_2R2_S1_3
+  images: "junos/vmx/23.2R2-S1.3/images"
+  re_image: "junos-vmx-x86-64-23.2R2-S1.3.qcow2"
+  fpc_image: "vFPC-20240508.img"
   
 devices:
   - name: BB11
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 1
     interfaces:
       - network: BB11_BB21
       - network: BB11_BB22
       - network: BB11_PE11
       - network: BB11_PE12
+      - network: BB11_BB12
   - name: BB12
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 2
     interfaces:
       - network: BB12_BB22
       - network: BB12_BB21
-      - network: BB12_PE11
       - network: BB12_PE12
+      - network: BB12_PE11
+      - network: BB11_BB12
   - name: BB21
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 3
     interfaces:
       - network: BB11_BB21
       - network: BB12_BB21
-      - network: BB21_BB22
       - network: BB21_PE21
+      - network: BB21_PE22
+      - network: BB21_BB22
   - name: BB22
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 4
     interfaces:
       - network: BB12_BB22
       - network: BB11_BB22
-      - network: BB21_BB22
       - network: BB22_PE22
+      - network: BB22_PE21
+      - network: BB21_BB22
   - name: PE11
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 5
     interfaces:
       - network: BB11_PE11
       - network: BB12_PE11
+      - network: PE11_PE12
       - network: PE11_CE
       - network: PE11_PE21
   - name: PE12
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 6
     interfaces:
-      - network: BB11_PE12
       - network: BB12_PE12
+      - network: BB11_PE12
+      - network: PE11_PE12
       - network: PE12_CE
       - network: PE12_PE22
   - name: PE21
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 7
     interfaces:
       - network: BB21_PE21
+      - network: BB22_PE21
       - network: PE21_PE22
       - network: PE21_CE
       - network: PE11_PE21
   - name: PE22
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 8
     interfaces:
       - network: BB22_PE22
+      - network: BB21_PE22
       - network: PE21_PE22
       - network: PE22_CE
       - network: PE12_PE22
   - name: CE
     vmx: 
-      <<: *vmx
+      <<: *vmx_23_2R2_S1_3
       id: 9
     interfaces:
       - network: PE11_CE
       - network: PE12_CE
       - network: PE21_CE
       - network: PE22_CE
+      - bridge: vmbr1
+      - bridge: vmbr2

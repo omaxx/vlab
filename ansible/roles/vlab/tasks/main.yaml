@@ -2,12 +2,12 @@
   ansible.builtin.import_tasks: install_kvm.yaml
   become: true
   tags: 
-    - install
+    - setup
     - never
 
 - name: Install management soft
   ansible.builtin.import_tasks: install_mgmt.yaml
   become: true
   tags: 
-    - install
+    - setup
     - never

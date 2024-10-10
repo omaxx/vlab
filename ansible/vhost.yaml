@@ -1,5 +1,9 @@
 - hosts: vlab
-  roles:
-    - name: vlab
-      tags: setup
-    
+  become: true
+  tasks:
+  - ansible.builtin.include_role:
+      name: vlab
+      tasks_from: install_kvm.yaml
+  - ansible.builtin.include_role:
+      name: vlab
+      tasks_from: install_mgmt.yaml

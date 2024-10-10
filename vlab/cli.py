@@ -20,57 +20,62 @@ logger.addHandler(RichHandler())
 
 @click.group()
 @click.pass_context
-@click.option("--ip", help="KVM ip address")
-def cli(ctx: click.Context, ip: Optional[str] = None):
+@click.option("--ip", "-i", help="KVM ip address", required=True)
+@click.option("--topology", "-t", help="Topology file", required=True)
+@click.option("--path", help="vhost: vLAB path")
+@click.option("--images", help="vhost: images path")
+def cli(
+    ctx: click.Context, 
+    ip: Optional[str],
+    topology: Optional[str],
+    path: Optional[str] = None,
+    images: Optional[str] = None,
+):
     ctx.ensure_object(dict)
-    ctx.obj['VHOST'] = VHost(ip=ip)
+    ctx.obj['VHOST'] = VHost(ip=ip, path=path, images=images)
+    ctx.obj['topology'] = Topology.load(topology) if topology is not None else None
 
 
 @cli.command(help="Display state of topology, devices and vms")
 @click.pass_context
-@click.argument("topology")
-def state(ctx: click.Context, topology: str):
+def state(ctx: click.Context):
     vhost: VHost = ctx.obj['VHOST']
-    topology = Topology.load(topology)
+    topology = ctx.obj['topology']
     vhost.fetch_state(topology, console)
 
 
 @cli.command(help="Define topology")
 @click.pass_context
-@click.argument("topology")
-def define(ctx: click.Context, topology: str):
+def define(ctx: click.Context):
     vhost: VHost = ctx.obj['VHOST']
-    topology = Topology.load(topology)
+    topology = ctx.obj['topology']
     vhost.define(topology, console)
 
 
 @cli.command(help="Undefine topology")
 @click.pass_context
-@click.argument("topology")
 @click.option("--delete", "-d", is_flag=True, show_default=True, default=False, help="Delete images")
-def undefine(ctx: click.Context, topology: str, delete: bool):
+def undefine(ctx: click.Context, delete: bool):
     vhost: VHost = ctx.obj['VHOST']
-    topology = Topology.load(topology)
+    topology = ctx.obj['topology']
     vhost.undefine(topology, delete, console)
 
 
 @cli.command(help="Start device")
 @click.pass_context
-@click.argument("topology")
 @click.argument("devices", nargs=-1)
-def start(ctx: click.Context, topology: str, devices: Tuple[str, ...]):
+def start(ctx: click.Context, devices: Tuple[str, ...]):
     vhost: VHost = ctx.obj['VHOST']
-    topology = Topology.load(topology)
+    topology = ctx.obj['topology']
     vhost.start(topology, devices, console)
 
 
 @cli.command(help="Stop device")
 @click.pass_context
-@click.argument("topology")
 @click.argument("devices", nargs=-1)
-def stop(ctx: click.Context, topology: str, devices: Tuple[str, ...]):
+def stop(ctx: click.Context, devices: Tuple[str, ...]):
     vhost: VHost = ctx.obj['VHOST']
-    topology = Topology.load(topology)
+    topology = ctx.obj['topology']
     vhost.stop(topology, devices, console)
 
 

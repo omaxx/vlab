@@ -1,0 +1,85 @@
+set system host-name PE12
+
+set interfaces lo0 unit 0 family inet address 10.0.0.6/32
+set interfaces lo0 unit 0 family inet6 address fd00::6/128
+set interfaces lo0 unit 0 family iso address 49.0001.0100.0000.0006.00
+
+set interfaces ge-0/0/0 mtu 9100
+set interfaces ge-0/0/0 unit 0 family inet address 10.0.26.6/24
+set interfaces ge-0/0/0 unit 0 family inet6 
+set interfaces ge-0/0/0 unit 0 family iso
+set interfaces ge-0/0/0 unit 0 family mpls
+
+set interfaces ge-0/0/1 mtu 9100
+set interfaces ge-0/0/1 unit 0 family inet address 10.0.16.6/24
+set interfaces ge-0/0/1 unit 0 family inet6 
+set interfaces ge-0/0/1 unit 0 family iso
+set interfaces ge-0/0/1 unit 0 family mpls
+
+set interfaces ge-0/0/2 mtu 9100
+set interfaces ge-0/0/2 unit 0 family inet address 10.0.56.6/24
+set interfaces ge-0/0/2 unit 0 family inet6 
+set interfaces ge-0/0/2 unit 0 family iso
+set interfaces ge-0/0/2 unit 0 family mpls
+
+set interfaces ge-0/0/3 mtu 9100
+set interfaces ge-0/0/3 unit 0 family inet address 10.0.69.6/24
+set interfaces ge-0/0/3 unit 0 family inet6 address fd00:0:0:69::6/64
+
+set interfaces ge-0/0/4 mtu 9100
+set interfaces ge-0/0/4 unit 0 family inet address 10.0.68.6/24
+set interfaces ge-0/0/4 unit 0 family inet6 
+
+delete interfaces fxp0 unit 0 family inet dhcp
+set interfaces fxp0 unit 0 family inet address 192.168.0.6/24
+
+set protocols isis interface ge-0/0/0.0 point-to-point
+set protocols isis interface ge-0/0/1.0 point-to-point
+set protocols isis interface ge-0/0/2.0 point-to-point
+set protocols isis interface lo0.0 passive
+
+set protocols mpls interface ge-0/0/0.0
+set protocols mpls interface ge-0/0/1.0
+set protocols mpls interface ge-0/0/2.0
+set protocols mpls ipv6-tunneling
+
+set protocols ldp track-igp-metric
+set protocols ldp interface ge-0/0/0.0
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/2.0
+
+set protocols rsvp interface ge-0/0/0.0
+set protocols rsvp interface ge-0/0/1.0
+set protocols rsvp interface ge-0/0/2.0
+
+set policy-options policy-statement LB then load-balance per-flow
+set policy-options policy-statement NHS then next-hop self
+
+set routing-options autonomous-system 65000
+
+set protocols bgp group PE type internal
+set protocols bgp group PE local-address 10.0.0.6
+set protocols bgp group PE family inet unicast
+set protocols bgp group PE family inet6 unicast
+set protocols bgp group PE export NHS
+set protocols bgp group PE neighbor 10.0.0.5
+set protocols bgp group PE neighbor 10.0.0.7
+set protocols bgp group PE neighbor 10.0.0.8
+
+set protocols bgp group CE family inet unicast
+set protocols bgp group CE family inet6 unicast
+set protocols bgp group CE peer-as 65010
+set protocols bgp group CE neighbor 10.0.69.9 family inet unicast
+set protocols bgp group CE neighbor fd00:0:0:69::9 family inet6 unicast
+
+set protocols bgp group RR type internal
+set protocols bgp group RR local-address 10.0.0.6
+set protocols bgp group RR family inet unicast
+set protocols bgp group RR family inet6 unicast
+set protocols bgp group RR family inet unicast add-path receive
+set protocols bgp group RR family inet6 unicast add-path receive
+set protocols bgp group RR export NHS
+set protocols bgp group RR multipath
+set protocols bgp group RR neighbor 10.0.0.11
+set protocols bgp group RR neighbor 10.0.0.12
+set protocols bgp group RR shutdown

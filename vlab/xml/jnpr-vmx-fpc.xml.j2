@@ -36,11 +36,12 @@
             <source file='{{ vhost.path }}/{{ vm.path }}/{{ vm.images[0] }}'/>
             <target dev='hda' bus='ide'/>
         </disk>
-        {# <disk type='file' device='disk'>
+        <disk type='file' device='disk'>
             <driver name='qemu' type='raw' cache='directsync'/>
             <source file='{{ vhost.path }}/{{ vm.path }}/{{ vm.images[1] }}'/>
-            <target bus="virtio" dev="hdb" />
-        </disk> #}
+            {# <target dev="hdb" bus="ide" /> #}
+            <target dev="sda" bus="usb" />
+        </disk>
 
         <controller type='pci' index='0' model='pci-root'/>
 

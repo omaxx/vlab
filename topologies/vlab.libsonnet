@@ -1,4 +1,7 @@
-local vmx(arg) = {
+local RE_CONSOLE_PORT = 8600;
+local FPC_CONSOLE_PORT = 9600;
+
+local vmx(id, arg) = {
     local device = {
         re_num: 1,
         re_vcpu: 1,
@@ -8,12 +11,11 @@ local vmx(arg) = {
         fpc_memory: 2048,
     } + arg,
     name: device.name,
+    interfaces: device.interfaces,
     vms: [
         {
+            local vm = self,
             name: device.name + "~re" + slot,
-            // device_id: device.id,
-            // device_name: device.name,
-            // slot: slot,
             xml: "jnpr-vmx-re",
             path: device.name + "/re" + slot,
             vcpu: device.re_vcpu,
@@ -25,15 +27,15 @@ local vmx(arg) = {
                 {path: "metadata-usb-re" + slot + ".img"},
             ],
             interfaces: [
-                // {bridge: "mgmt"}, {network: device.name + "~int"}
+                {bridge: "mgmt", target: vm.name + "~mgmt", mac: "C0:FF:EE:" + id + ":" + (10 + slot) + ":00"}, 
+                {network: device.name + "~int", target: vm.name + "~int"},
             ],
+            console: RE_CONSOLE_PORT + id + 100 * slot,
         } for slot in std.range(0, device.re_num - 1)
     ] + [
         {
+            local vm = self,
             name: device.name + "~fpc" + slot,
-            // device_id: device.id,
-            // device_name: device.name,
-            // slot: slot,
             xml: "jnpr-vmx-fpc",
             path: device.name + "/fpc" + slot,
             vcpu: device.fpc_vcpu,
@@ -44,19 +46,25 @@ local vmx(arg) = {
                 {path: "metadata-usb-fpc" + slot + ".img"},
             ],
             interfaces: [
-                // {bridge: "mgmt"}, {network: device.name + "~int"}
+                {bridge: "mgmt", target: vm.name + "~mgmt", mac: "C0:FF:EE:" + id + ":" + (slot) + ":ff"}, 
+                {network: device.name + "~int", target: vm.name + "~int"},
             ] + [
-                interface.value 
+                interface.value + {
+                    target: vm.name + "~" + std.substr(interface.key, 7, 2), 
+                    mac: "C0:FF:EE:" + id + ":" + (slot) + ":" + std.substr(interface.key, 7, 2),
+                }
                 for interface in std.objectKeysValues(device.interfaces) 
                 if std.substr(interface.key, 0, 4) == "ge-" + slot
             ],
+            console: FPC_CONSOLE_PORT + id + 100 * slot,
         } for slot in std.range(0, device.fpc_num - 1)
     ],
     vnets: [
         {name: device.name + "~int"},
-    ],
+    ]
 };
-local vqfx(arg) = {
+
+local vqfx(id, arg) = {
     local device = {
         re_num: 1,
         re_vcpu: 1,
@@ -69,9 +77,6 @@ local vqfx(arg) = {
     vms: [
         {
             name: device.name + "~re" + slot,
-            // device_id: device.id,
-            // device_name: device.name,
-            // slot: slot,
             xml: "jnpr-vqfx-re",
             path: device.name + "/re" + slot,
             vcpu: device.re_vcpu,
@@ -87,9 +92,6 @@ local vqfx(arg) = {
     ] + [
         {
             name: device.name + "~fpc" + slot,
-            // device_id: device.id,
-            // device_name: device.name,
-            // slot: slot,
             xml: "jnpr-vqfx-fpc",
             path: device.name + "/fpc" + slot,
             vcpu: device.fpc_vcpu,
@@ -104,7 +106,8 @@ local vqfx(arg) = {
         {name: device.name + "~res"},
     ],
 };
-local vsrx(arg) = {
+
+local vsrx(id, arg) = {
     local device = {
         vcpu: 1,
         memory: 1024,
@@ -128,8 +131,11 @@ local vsrx(arg) = {
     ],
     vnets: [],
 };
+
 {
-    vmx: vmx,
-    vqfx: vqfx,
-    vsrx: vsrx,
+    jnpr: {
+        vmx: vmx,
+        vqfx: vqfx,
+        vsrx: vsrx,
+    },
 }

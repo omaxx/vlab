@@ -1,75 +1,85 @@
 {
     devices: {
-        r1: {
+        BB11: {
             interfaces: {
-                "ge-0/0/0": {network: "R1_R9"},
-                "ge-0/0/1": {network: "R1_R2"},
-                "ge-0/0/2": {network: "R1_R3"},
-                "ge-0/0/3": {network: "R1_R4"},
+                "ge-0/0/0": {network: "BB11_BB21"},
+                "ge-0/0/1": {network: "BB11_BB22"},
+                "ge-0/0/2": {network: "BB11_PE11"},
+                "ge-0/0/3": {network: "BB11_PE12"},
+                "ge-0/0/4": {network: "BB11_BB12"},
             },
         },
-        r2: {
+        BB12: {
             interfaces: {
-                "ge-0/0/0": {network: "R1_R2"},
-                "ge-0/0/1": {network: "R2_R3"},
-                "ge-0/0/2": {network: "R2_R8"},
-                "ge-0/0/3": {network: "R2_R5"},
+                "ge-0/0/0": {network: "BB12_BB22"},
+                "ge-0/0/1": {network: "BB12_BB21"},
+                "ge-0/0/2": {network: "BB12_PE12"},
+                "ge-0/0/3": {network: "BB12_PE11"},
+                "ge-0/0/4": {network: "BB11_BB12"},
             },
         },
-        r3: {
+        BB21: {
             interfaces: {
-                "ge-0/0/0": {network: "R2_R3"},
-                "ge-0/0/1": {network: "R3_R4"},
-                "ge-0/0/2": {network: "R3_R7"},
-                "ge-0/0/3": {network: "R3_R7"},
+                "ge-0/0/0": {network: "BB11_BB21"},
+                "ge-0/0/1": {network: "BB12_BB21"},
+                "ge-0/0/2": {network: "BB21_PE21"},
+                "ge-0/0/3": {network: "BB21_PE22"},
+                "ge-0/0/4": {network: "BB21_BB22"},
             },
         },
-        r4: {
+        BB22: {
             interfaces: {
-                "ge-0/0/0": {network: "R3_R4"},
-                "ge-0/0/1": {network: "R4_R5"},
-                "ge-0/0/2": {network: "R1_R4"},
-                "ge-0/0/3": {network: "R4_R6"},
+                "ge-0/0/0": {network: "BB12_BB22"},
+                "ge-0/0/1": {network: "BB11_BB22"},
+                "ge-0/0/2": {network: "BB22_PE22"},
+                "ge-0/0/3": {network: "BB22_PE21"},
+                "ge-0/0/4": {network: "BB21_BB22"},
             },
         },
-        r5: {
+        PE11: {
             interfaces: {
-                "ge-0/0/0": {network: "R4_R5"},
-                "ge-0/0/1": {network: "R5_R6"},
-                "ge-0/0/2": {network: "R2_R5"},
-                "ge-0/0/3": {network: "R5_R8"},
+                "ge-0/0/0": {network: "BB11_PE11"},
+                "ge-0/0/1": {network: "BB12_PE11"},
+                "ge-0/0/2": {network: "PE11_PE12"},
+                "ge-0/0/3": {network: "PE11_CE"},
+                "ge-0/0/4": {network: "PE11_PE21"},
             },
         },
-        r6: {
+        PE12: {
             interfaces: {
-                "ge-0/0/0": {network: "R5_R6"},
-                "ge-0/0/1": {network: "R6_R7"},
-                "ge-0/0/2": {network: "R4_R6"},
-                "ge-0/0/3": {network: "R6_R9"},
+                "ge-0/0/0": {network: "BB12_PE12"},
+                "ge-0/0/1": {network: "BB11_PE12"},
+                "ge-0/0/2": {network: "PE11_PE12"},
+                "ge-0/0/3": {network: "PE12_CE"},
+                "ge-0/0/4": {network: "PE12_PE22"},
             },
         },
-        r7: {
+        PE21: {
             interfaces: {
-                "ge-0/0/0": {network: "R6_R7"},
-                "ge-0/0/1": {network: "R7_R8"},
-                "ge-0/0/2": {network: "R7_R9"},
-                "ge-0/0/3": {network: "R3_R7"},
+                "ge-0/0/0": {network: "BB21_PE21"},
+                "ge-0/0/1": {network: "BB22_PE21"},
+                "ge-0/0/2": {network: "PE21_PE22"},
+                "ge-0/0/3": {network: "PE21_CE"},
+                "ge-0/0/4": {network: "PE11_PE21"},
             },
         },
-        r8: {
+        PE22: {
             interfaces: {
-                "ge-0/0/0": {network: "R7_R8"},
-                "ge-0/0/1": {network: "R8_R9"},
-                "ge-0/0/2": {network: "R5_R8"},
-                "ge-0/0/3": {network: "R2_R8"},
+                "ge-0/0/0": {network: "BB22_PE22"},
+                "ge-0/0/1": {network: "BB21_PE22"},
+                "ge-0/0/2": {network: "PE21_PE22"},
+                "ge-0/0/3": {network: "PE22_CE"},
+                "ge-0/0/4": {network: "PE12_PE22"},
             },
         },
-        r9: {
+        CE: {
             interfaces: {
-                "ge-0/0/0": {network: "R8_R9"},
-                "ge-0/0/1": {network: "R1_R9"},
-                "ge-0/0/2": {network: "R6_R9"},
-                "ge-0/0/3": {network: "R7_R9"},
+                "ge-0/0/0": {network: "PE11_CE"},
+                "ge-0/0/1": {network: "PE12_CE"},
+                "ge-0/0/2": {network: "PE21_CE"},
+                "ge-0/0/3": {network: "PE22_CE"},
+                "ge-0/0/4": {bridge: "vmbr1"},
+                "ge-0/0/5": {bridge: "vmbr2"},
             },
         },
     }

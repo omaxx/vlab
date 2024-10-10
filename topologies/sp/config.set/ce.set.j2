@@ -1,0 +1,77 @@
+set system host-name CE
+
+
+set interfaces ge-0/0/0 mtu 9100
+set interfaces ge-0/0/1 mtu 9100
+
+set logical-systems WEST interfaces lo0 unit 10 family inet address 10.10.0.1/32
+set logical-systems WEST interfaces lo0 unit 10 family inet6 address fd00:10::1/128
+
+set logical-systems WEST interfaces ge-0/0/0 unit 0 family inet address 10.0.59.9/24
+set logical-systems WEST interfaces ge-0/0/0 unit 0 family inet6 address fd00:0:0:59::9/64
+set logical-systems WEST interfaces ge-0/0/1 unit 0 family inet address 10.0.69.9/24
+set logical-systems WEST interfaces ge-0/0/1 unit 0 family inet6 address fd00:0:0:69::9/64
+set logical-systems WEST interfaces ge-0/0/4 unit 0 family inet address 192.168.1.1/24
+set logical-systems WEST interfaces ge-0/0/4 unit 0 family inet6 address fd01::1/64
+
+set logical-systems WEST policy-options policy-statement LB then load-balance per-flow
+
+set logical-systems WEST routing-options forwarding-table export LB
+set logical-systems WEST routing-options autonomous-system 65010
+
+set logical-systems WEST policy-options policy-statement LB then load-balance per-flow
+
+set logical-systems WEST policy-options policy-statement PE.out term IPv4 from protocol direct
+set logical-systems WEST policy-options policy-statement PE.out term IPv4 from route-filter 10.10.0.0/24 prefix-length-range /32-/32
+set logical-systems WEST policy-options policy-statement PE.out term IPv4 from route-filter 192.168.1.0/24 exact
+set logical-systems WEST policy-options policy-statement PE.out term IPv4 then accept
+set logical-systems WEST policy-options policy-statement PE.out term IPv6 from protocol direct
+set logical-systems WEST policy-options policy-statement PE.out term IPv6 from route-filter fd00:10::/64 prefix-length-range /128-/128
+set logical-systems WEST policy-options policy-statement PE.out term IPv6 then accept
+
+set logical-systems WEST protocols bgp group PE family inet unicast
+set logical-systems WEST protocols bgp group PE family inet6 unicast
+set logical-systems WEST protocols bgp group PE export PE.out
+set logical-systems WEST protocols bgp group PE peer-as 65000
+set logical-systems WEST protocols bgp group PE neighbor 10.0.59.5 family inet unicast
+set logical-systems WEST protocols bgp group PE neighbor 10.0.69.6 family inet unicast
+set logical-systems WEST protocols bgp group PE neighbor fd00:0:0:59::5 family inet6 unicast
+set logical-systems WEST protocols bgp group PE neighbor fd00:0:0:69::6 family inet6 unicast
+
+
+set interfaces ge-0/0/2 mtu 9100
+set interfaces ge-0/0/3 mtu 9100
+
+set logical-systems EAST interfaces lo0 unit 20 family inet address 10.20.0.1/32
+set logical-systems EAST interfaces lo0 unit 20 family inet6 address fd00:20::1/128
+
+set logical-systems EAST interfaces ge-0/0/2 unit 0 family inet address 10.0.79.9/24
+set logical-systems EAST interfaces ge-0/0/2 unit 0 family inet6 address fd00:0:0:79::9/64
+set logical-systems EAST interfaces ge-0/0/3 unit 0 family inet address 10.0.89.9/24
+set logical-systems EAST interfaces ge-0/0/3 unit 0 family inet6 address fd00:0:0:89::9/64
+set logical-systems EAST interfaces ge-0/0/5 unit 0 family inet address 192.168.2.1/24
+set logical-systems EAST interfaces ge-0/0/5 unit 0 family inet6 address fd02::1/64
+
+set logical-systems EAST policy-options policy-statement LB then load-balance per-flow
+
+set logical-systems EAST routing-options forwarding-table export LB
+set logical-systems EAST routing-options autonomous-system 65020
+
+set logical-systems EAST policy-options policy-statement LB then load-balance per-flow
+
+set logical-systems EAST policy-options policy-statement PE.out term IPv4 from protocol direct
+set logical-systems EAST policy-options policy-statement PE.out term IPv4 from route-filter 10.20.0.0/24 prefix-length-range /32-/32
+set logical-systems EAST policy-options policy-statement PE.out term IPv4 from route-filter 192.168.2.0/24 exact
+set logical-systems EAST policy-options policy-statement PE.out term IPv4 then accept
+set logical-systems EAST policy-options policy-statement PE.out term IPv6 from protocol direct
+set logical-systems EAST policy-options policy-statement PE.out term IPv6 from route-filter fd00:20::/64 prefix-length-range /128-/128
+set logical-systems EAST policy-options policy-statement PE.out term IPv6 then accept
+
+set logical-systems EAST protocols bgp group PE family inet unicast
+set logical-systems EAST protocols bgp group PE family inet6 unicast
+set logical-systems EAST protocols bgp group PE export PE.out
+set logical-systems EAST protocols bgp group PE peer-as 65000
+set logical-systems EAST protocols bgp group PE neighbor 10.0.79.7 family inet unicast
+set logical-systems EAST protocols bgp group PE neighbor 10.0.89.8 family inet unicast
+set logical-systems EAST protocols bgp group PE neighbor fd00:0:0:79::7 family inet6 unicast
+set logical-systems EAST protocols bgp group PE neighbor fd00:0:0:89::8 family inet6 unicast

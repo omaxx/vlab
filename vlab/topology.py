@@ -13,9 +13,8 @@ from rich.table import Table
 import marshmallow
 import marshmallow_dataclass
 import yaml
+import _jsonnet as jsonnet
 
-
-FWD_MASK = "0xfff8"
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,7 @@ class VM:
         SHUTOFF = 5
         CRASHED = 6
         PMSUSPENDED = 7
-        ABSEND = -1
+        ABSENT = -1
 
     name: str
     xml: str
@@ -104,7 +103,7 @@ class VNet:
 @dataclass
 class Device:
     name: str
-    interfaces: List[Interface] = field(default_factory=list)
+    interfaces: Dict[str, Interface] = field(default_factory=dict)
 
     vms: List[VM] = field(default_factory=list)
     vnets: List[VNet] = field(default_factory=list)
@@ -132,9 +131,16 @@ class Topology:
 
     def __post_init__(self):
         for device in self.devices:
-            for interface in device.interfaces:
-                if (vnet := VNet(interface.network)) not in self.vnets:
+            for interface in device.interfaces.values():
+                if interface.network is not None and (vnet := VNet(interface.network)) not in self.vnets:
                     self.vnets.append(vnet)
+
+            # for vm in device.vms:
+            #     for interface in vm.interfaces:
+            #         if interface.network is not None:
+            #             vnet = VNet(interface.network)
+            #             if vnet not in self.vnets and vnet not in device.vnets:
+            #                 self.vnets.append(vnet)
 
     @classmethod
     def load(cls, file: Union[str, Path]) -> Self:
@@ -142,12 +148,16 @@ class Topology:
             file = Path(file)
         name = file.with_suffix("").name
         schema = marshmallow_dataclass.class_schema(Topology, base_schema=Schema)()
-        with open(file) as io:
-            if file.suffix == ".json":
+        if file.suffix == ".json":
+            with open(file) as io:
                 return schema.load({"name": name, **json.load(io)})
-            if file.suffix in [".yaml", ".yml"]:
+        if file.suffix in [".yaml", ".yml"]:
+            with open(file) as io:
                 return schema.load({"name": name, **(yaml.safe_load(io) or {})})
-            logger.critical(f"Unknown topology file format: `{file.suffix}`")
+        if file.suffix == ".jsonnet":
+            return schema.load({"name": name, **json.loads(jsonnet.evaluate_file(str(file)))})
+
+        logger.critical(f"Unknown topology file format: `{file.suffix}`")
 
 
 RE_CONSOLE_PORT = 8600

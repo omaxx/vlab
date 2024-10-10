@@ -2,7 +2,7 @@
   - name: Create management network
     ansible.builtin.template:
       src: interfaces/mgmt.conf.j2
-      dest: /etc/network/interfaces.d/mgmt.conf
+      dest: /etc/network/interfaces.d/mgmt
       mode: 0644
     register: network
 

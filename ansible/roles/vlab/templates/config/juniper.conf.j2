@@ -13,7 +13,9 @@ system {
         }
     }
     services {
-        ssh;
+        ssh {
+            root-login allow;
+        }
         netconf {
             ssh;
         }
@@ -61,7 +63,7 @@ interfaces {
             family inet dhcp;
         }
     }
-    {# for vqfx: #}
+    {# for vqfx: -#}
     em1 {
         unit 0 {
             family inet {

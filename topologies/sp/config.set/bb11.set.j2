@@ -1,0 +1,112 @@
+set system host-name BB11
+
+set interfaces lo0 unit 0 family inet address 10.0.0.1/32
+set interfaces lo0 unit 0 family inet6 address fd00::1/128
+set interfaces lo0 unit 0 family iso address 49.0001.0100.0000.0001.00
+
+set interfaces ge-0/0/0 mtu 9100
+set interfaces ge-0/0/0 unit 0 family inet address 10.0.13.1/24
+set interfaces ge-0/0/0 unit 0 family inet6 
+set interfaces ge-0/0/0 unit 0 family iso
+set interfaces ge-0/0/0 unit 0 family mpls
+
+set interfaces ge-0/0/1 mtu 9100
+set interfaces ge-0/0/1 unit 0 family inet address 10.0.14.1/24
+set interfaces ge-0/0/1 unit 0 family inet6 
+set interfaces ge-0/0/1 unit 0 family iso
+set interfaces ge-0/0/1 unit 0 family mpls
+
+set interfaces ge-0/0/2 mtu 9100
+set interfaces ge-0/0/2 unit 0 family inet address 10.0.15.1/24
+set interfaces ge-0/0/2 unit 0 family inet6 
+set interfaces ge-0/0/2 unit 0 family iso
+set interfaces ge-0/0/2 unit 0 family mpls
+
+set interfaces ge-0/0/3 mtu 9100
+set interfaces ge-0/0/3 unit 0 family inet address 10.0.16.1/24
+set interfaces ge-0/0/3 unit 0 family inet6 
+set interfaces ge-0/0/3 unit 0 family iso
+set interfaces ge-0/0/3 unit 0 family mpls
+
+set interfaces ge-0/0/4 mtu 9100
+set interfaces ge-0/0/4 unit 0 family inet address 10.0.12.1/24
+set interfaces ge-0/0/4 unit 0 family inet6 
+set interfaces ge-0/0/4 unit 0 family iso
+set interfaces ge-0/0/4 unit 0 family mpls
+
+delete interfaces fxp0 unit 0 family inet dhcp
+set interfaces fxp0 unit 0 family inet address 192.168.0.1/24
+
+set policy-options policy-statement ISIS.out term STATIC from protocol static
+set policy-options policy-statement ISIS.out term STATIC then accept
+
+set protocols isis interface ge-0/0/0.0 point-to-point
+set protocols isis interface ge-0/0/1.0 point-to-point
+set protocols isis interface ge-0/0/2.0 point-to-point
+set protocols isis interface ge-0/0/3.0 point-to-point
+set protocols isis interface ge-0/0/4.0 point-to-point
+set protocols isis interface lo0.0 passive
+set protocols isis export ISIS.out
+
+set protocols mpls interface ge-0/0/0.0
+set protocols mpls interface ge-0/0/1.0
+set protocols mpls interface ge-0/0/2.0
+set protocols mpls interface ge-0/0/3.0
+set protocols mpls interface ge-0/0/4.0
+
+set protocols ldp track-igp-metric
+set protocols ldp interface ge-0/0/0.0
+set protocols ldp interface ge-0/0/1.0
+set protocols ldp interface ge-0/0/2.0
+set protocols ldp interface ge-0/0/3.0
+set protocols ldp interface ge-0/0/4.0
+
+set protocols rsvp interface ge-0/0/0.0
+set protocols rsvp interface ge-0/0/1.0
+set protocols rsvp interface ge-0/0/2.0
+set protocols rsvp interface ge-0/0/3.0
+set protocols rsvp interface ge-0/0/4.0
+
+set policy-options policy-statement LB then load-balance per-flow
+
+set chassis fpc 0 pic 0 tunnel-services
+set interfaces lt-0/0/0 unit 0 encapsulation ethernet
+set interfaces lt-0/0/0 unit 0 peer-unit 1
+set interfaces lt-0/0/0 unit 0 family inet address 10.0.1.1/24
+set routing-options static route 10.0.0.11/32 next-hop 10.0.1.11
+
+set logical-systems RR interfaces lo0 unit 1 family inet address 10.0.0.11/32
+set logical-systems RR interfaces lt-0/0/0 unit 1 encapsulation ethernet
+set logical-systems RR interfaces lt-0/0/0 unit 1 peer-unit 0
+set logical-systems RR interfaces lt-0/0/0 unit 1 family inet address 10.0.1.11/24
+set logical-systems RR routing-options static route 0.0.0.0/0 next-hop 10.0.1.1
+
+
+
+
+set logical-systems RR protocols bgp family inet unicast nexthop-resolution no-resolution
+set logical-systems RR protocols bgp family inet6 unicast nexthop-resolution no-resolution
+
+set logical-systems RR protocols bgp group PE family inet unicast
+set logical-systems RR protocols bgp group PE family inet6 unicast
+set logical-systems RR protocols bgp group PE type internal
+set logical-systems RR protocols bgp group PE local-address 10.0.0.11
+set logical-systems RR protocols bgp group PE cluster 10.0.0.10
+set logical-systems RR protocols bgp group PE neighbor 10.0.0.5
+set logical-systems RR protocols bgp group PE neighbor 10.0.0.6
+set logical-systems RR protocols bgp group PE family inet unicast add-path send path-count 4
+set logical-systems RR protocols bgp group PE family inet6 unicast add-path send path-count 4
+
+set logical-systems RR protocols bgp group RR family inet unicast
+set logical-systems RR protocols bgp group RR family inet6 unicast
+set logical-systems RR protocols bgp group RR type internal
+set logical-systems RR protocols bgp group RR local-address 10.0.0.11
+set logical-systems RR protocols bgp group RR neighbor 10.0.0.12
+set logical-systems RR protocols bgp group RR neighbor 10.0.0.13
+set logical-systems RR protocols bgp group RR neighbor 10.0.0.14
+set logical-systems RR protocols bgp group RR family inet unicast add-path receive
+set logical-systems RR protocols bgp group RR family inet unicast add-path send path-count 4
+set logical-systems RR protocols bgp group RR family inet6 unicast add-path receive
+set logical-systems RR protocols bgp group RR family inet6 unicast add-path send path-count 4
+
+set logical-systems RR routing-options autonomous-system 65000
