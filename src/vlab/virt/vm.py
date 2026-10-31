@@ -59,7 +59,7 @@ class VM:
     """
 
     name: str
-    node: str | None = None  # vlab node this VM belongs to (metadata); None = not managed by vlab
+    device: str | None = None  # vlab device this VM belongs to (metadata); None = not managed by vlab
     seed: bool = True  # attach cloud-init seed.iso
     vcpus: int = 1
     memory: int = 4096  # MiB
@@ -75,9 +75,9 @@ class VM:
         vm_dir = host.vm_dir(self.name)
         dom = ET.Element("domain", type="kvm")
         ET.SubElement(dom, "name").text = self.name
-        if self.node is not None:
+        if self.device is not None:
             meta = ET.SubElement(ET.SubElement(dom, "metadata"), tag("domain"))
-            ET.SubElement(meta, tag("node")).text = self.node
+            ET.SubElement(meta, tag("device")).text = self.device
         ET.SubElement(dom, "memory", unit="MiB").text = str(self.memory)
         ET.SubElement(dom, "vcpu").text = str(self.vcpus)
 
@@ -119,11 +119,11 @@ class VM:
     def from_xml(cls, xml: str) -> Self:
         dom = ET.fromstring(xml)
         memory = dom.find("memory")
-        node = dom.find(f"metadata/{tag('domain')}/{tag('node')}")
+        device = dom.find(f"metadata/{tag('domain')}/{tag('device')}")
         os = dom.find("os")
         return cls(
             name=dom.findtext("name", ""),
-            node=node.text if node is not None else None,
+            device=device.text if device is not None else None,
             seed=any(d.get("device") == "cdrom" for d in dom.iterfind("devices/disk")),
             vcpus=int(dom.findtext("vcpu", "1")),
             memory=int(memory.text or 0) * KIB[memory.get("unit", "KiB")] // 1024 if memory is not None else 0,

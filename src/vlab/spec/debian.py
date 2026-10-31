@@ -4,7 +4,7 @@ import logging
 
 from ..host import Host
 from ..virt import VM, Interface
-from .node import Node
+from .device import Device
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ class Port:
 
 
 @dataclass
-class Debian(Node):
-    """Plain Debian cloud image node: one VM named like the node, qcow2 overlay on base image + cloud-init seed.
+class Debian(Device):
+    """Plain Debian cloud image device: one VM named like the device, qcow2 overlay on base image + cloud-init seed.
 
     MAC of port N (1-based): c0:ff:ee:<id>:00:<N>, id as 2 decimal digits.
     """
@@ -41,7 +41,7 @@ class Debian(Node):
         return [
             VM(
                 name=self.name,
-                node=self.name,
+                device=self.name,
                 vcpus=self.vcpus,
                 memory=self.memory,
                 interfaces=[

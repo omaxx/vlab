@@ -31,7 +31,7 @@ def test_mac():
 
 def test_one_vm_named_like_node():
     (vm,) = make(vcpus=2, memory=2048).vms()
-    assert (vm.name, vm.node, vm.vcpus, vm.memory) == ("r3", "r3", 2, 2048)
+    assert (vm.name, vm.device, vm.vcpus, vm.memory) == ("r3", "r3", 2, 2048)
     assert [(i.network, i.bridge, i.mac) for i in vm.interfaces] == [
         ("mgmt-1", None, "c0:ff:ee:03:00:01"),
         ("p2p-1", None, "c0:ff:ee:03:00:02"),

@@ -249,22 +249,23 @@ ssh-keygen -R 172.255.1.$n
 
 ## vlab CLI
 
-Node = lab device (spec file) → 1+ VMs + internal VNets, tagged in libvirt `<metadata>` (ns `https://omaxx.net/vlab`).
+Spec → libvirt: Device → 1+ VMs + internal VNets, Network → VNet. Tagged in libvirt `<metadata>` (ns `https://omaxx.net/vlab`).
 Only VNets with vlab metadata are started/stopped (stopped when no running VM uses them); others are never touched.
 
 ```shell
-# deploy node (define VNets + VMs, not started); keeps existing VM files unless --overwrite
-uv run vlab -v deploy -f topology/test.yaml/vm-1.yaml
-uv run vlab -v deploy -f topology/test.jsonnet/vm-2.jsonnet --overwrite
+# deploy networks (-n) then devices (-d), repeatable, not started; existing VNets kept, VM files kept unless --overwrite
+uv run vlab -v deploy -n topology/test.yaml/mgmt-1.yaml
+uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml -d topology/test.jsonnet/vm-2.jsonnet
+uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml --overwrite
 
-# start / stop: VM names, -n NODE (repeatable) or --all (VMs with vlab metadata)
+# start / stop: VM names, -d DEVICE (repeatable) or --all (VMs with vlab metadata)
 uv run vlab -v start --all
-uv run vlab -v stop -n vm-01
+uv run vlab -v stop -d vm-01
 
 # delete VMs (+ UEFI NVRAM); VM folders removed unless --keep-files
-uv run vlab -v delete -n vm-02 --keep-files
+uv run vlab -v delete -d vm-02 --keep-files
 
-# show (running = green); -vv = debug incl. XML
+# show (running = green, VNet devices "-" = not managed by vlab); -vv = debug incl. XML
 uv run vlab list vms
 uv run vlab list vnets
 ```

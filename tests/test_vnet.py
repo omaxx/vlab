@@ -28,15 +28,24 @@ def test_custom_bridge():
 
 
 def test_nodes_metadata(validate_xml, tmp_path):
-    vnet = VNet("r1-int", nodes=["r1", "r2"])
+    vnet = VNet("r1-int", devices=["r1", "r2"])
     xml = vnet.to_xml()
-    assert "<vlab:node>r1</vlab:node>" in xml and "<vlab:node>r2</vlab:node>" in xml
+    assert "<vlab:device>r1</vlab:device>" in xml and "<vlab:device>r2</vlab:device>" in xml
     validate_xml(xml, "network", tmp_path)
     assert vnet.managed
     assert not VNet("mgmt-1").managed
 
 
 def test_from_xml_roundtrip():
-    for vnet in (VNet("p2p-1"), VNet("mgmt-1", bridge="br-m", ip="172.255.1.254/24", forward="nat", nodes=["r1"])):
+    for vnet in (VNet("p2p-1"), VNet("mgmt-1", bridge="br-m", ip="172.255.1.254/24", forward="nat", devices=["r1"])):
         back = VNet.from_xml(vnet.to_xml())
-        assert back == VNet(vnet.name, vnet.bridge or vnet.name, vnet.ip, vnet.forward, vnet.nodes)
+        assert back == VNet(vnet.name, vnet.bridge or vnet.name, vnet.ip, vnet.forward, vnet.devices)
+
+
+def test_managed_flag():
+    assert VNet("mgmt-1", devices=[]).managed  # vlab network shared by all devices
+    assert "metadata" in VNet("mgmt-1", devices=[]).to_xml()
+    assert not VNet("mgmt-1").managed
+    assert "metadata" not in VNet("mgmt-1").to_xml()
+    assert VNet.from_xml(VNet("mgmt-1", devices=[]).to_xml()).devices == []
+    assert VNet.from_xml(VNet("mgmt-1").to_xml()).devices is None

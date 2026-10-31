@@ -7,7 +7,7 @@ from rich.table import Table
 
 from . import spec, virt
 from .host import Host
-from .spec import Debian
+from .spec import Debian, Network
 from .utils import load_file
 
 LOG_LEVELS = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
@@ -24,37 +24,42 @@ def main(ctx: click.Context, verbose: int) -> None:
     ctx.obj = Host()
 
 
-spec_file = click.option(
-    "-f", "--file", "path", required=True, type=click.Path(exists=True, dir_okay=False),
-    help="node spec: .yaml, .json or .jsonnet",
-)
+SPEC_FILE = click.Path(exists=True, dir_okay=False)
 
 
 @main.command()
-@spec_file
+@click.option("-d", "--device", "devices", multiple=True, type=SPEC_FILE, help="device spec file (repeatable)")
+@click.option("-n", "--network", "networks", multiple=True, type=SPEC_FILE, help="network spec file (repeatable)")
 @click.option("--overwrite", is_flag=True, help="rewrite existing VM files instead of keeping them")
 @click.pass_obj
-def deploy(host: Host, path: str, overwrite: bool) -> None:
-    """Define node VNets and VMs on host (not started)."""
-    node = Debian.from_dict(load_file(path))
-    node.deploy(host, overwrite=overwrite)
-    click.echo(f"{node.name} defined")
+def deploy(host: Host, devices: tuple[str, ...], networks: tuple[str, ...], overwrite: bool) -> None:
+    """Define networks, then devices (VNets + VMs) on host, not started. Spec: .yaml, .json or .jsonnet."""
+    if not (devices or networks):
+        raise click.UsageError("give -d DEVICE_FILE and/or -n NETWORK_FILE")
+    for path in networks:
+        network = Network.from_dict(load_file(path))
+        network.deploy(host)
+        click.echo(f"network {network.name} deployed")
+    for path in devices:
+        device = Debian.from_dict(load_file(path))
+        device.deploy(host, overwrite=overwrite)
+        click.echo(f"device {device.name} deployed")
 
 
-def select_vms(host: Host, vms: tuple[str, ...], nodes: tuple[str, ...], all_: bool) -> list[str]:
-    """VM names: given VM names + VMs of given nodes; --all = every VM with vlab metadata."""
-    if not (vms or nodes or all_):
-        raise click.UsageError("give VM names, --node or --all")
+def select_vms(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool) -> list[str]:
+    """VM names: given VM names + VMs of given devices; --all = every VM with vlab metadata."""
+    if not (vms or devices or all_):
+        raise click.UsageError("give VM names, --device or --all")
     selected = list(vms)
     for vm, _ in virt.list_vms(host):
-        if vm.node is not None and (all_ or vm.node in nodes) and vm.name not in selected:
+        if vm.device is not None and (all_ or vm.device in devices) and vm.name not in selected:
             selected.append(vm.name)
     return selected
 
 
 def vm_selection(f):
     f = click.argument("vms", nargs=-1)(f)
-    f = click.option("-n", "--node", "nodes", multiple=True, help="all VMs of node (repeatable)")(f)
+    f = click.option("-d", "--device", "devices", multiple=True, help="all VMs of device (repeatable)")(f)
     f = click.option("--all", "all_", is_flag=True, help="all VMs managed by vlab")(f)
     return f
 
@@ -62,50 +67,50 @@ def vm_selection(f):
 @main.command()
 @vm_selection
 @click.pass_obj
-def start(host: Host, vms, nodes, all_) -> None:
+def start(host: Host, vms, devices, all_) -> None:
     """Start VMs and their vlab VNets."""
-    virt.start_vms(host, *select_vms(host, vms, nodes, all_))
+    virt.start_vms(host, *select_vms(host, vms, devices, all_))
 
 
 @main.command()
 @vm_selection
 @click.pass_obj
-def stop(host: Host, vms, nodes, all_) -> None:
+def stop(host: Host, vms, devices, all_) -> None:
     """Force off VMs, stop vlab VNets no longer used."""
-    virt.stop_vms(host, *select_vms(host, vms, nodes, all_))
+    virt.stop_vms(host, *select_vms(host, vms, devices, all_))
 
 
 @main.command()
 @vm_selection
 @click.option("--keep-files", is_flag=True, help="keep VM folders on host")
 @click.pass_obj
-def delete(host: Host, vms, nodes, all_, keep_files: bool) -> None:
+def delete(host: Host, vms, devices, all_, keep_files: bool) -> None:
     """Delete VMs from libvirt (and their files unless --keep-files)."""
-    spec.delete(host, *select_vms(host, vms, nodes, all_), keep_files=keep_files)
+    spec.delete(host, *select_vms(host, vms, devices, all_), keep_files=keep_files)
 
 
 @main.group("list")
 def list_() -> None:
-    """Show VMs or VNets on host (running in green)."""
+    """Show VMs or VNets on host (running in green; VNet devices "-" = not managed by vlab)."""
 
 
 @list_.command("vms")
 @click.pass_obj
 def list_vms(host: Host) -> None:
-    table = Table("name", "node", "interfaces", "disks")
+    table = Table("name", "device", "interfaces", "disks")
     for vm, active in virt.list_vms(host):
         ifaces = ", ".join(f"net({i.network})" if i.network else f"br({i.bridge})" for i in vm.interfaces)
-        table.add_row(vm.name, vm.node or "", ifaces, "\n".join(vm.disks), style="green" if active else "")
+        table.add_row(vm.name, vm.device or "", ifaces, "\n".join(vm.disks), style="green" if active else "")
     Console().print(table)
 
 
 @list_.command("vnets")
 @click.pass_obj
 def list_vnets(host: Host) -> None:
-    table = Table("name", "nodes", "bridge", "forward", "ip")
+    table = Table("name", "devices", "bridge", "forward", "ip")
     for vnet, active in virt.list_vnets(host):
         table.add_row(
-            vnet.name, ", ".join(vnet.nodes), vnet.bridge or "", vnet.forward or "", vnet.ip or "",
+            vnet.name, "-" if vnet.devices is None else ", ".join(vnet.devices), vnet.bridge or "", vnet.forward or "", vnet.ip or "",
             style="green" if active else "",
         )
     Console().print(table)

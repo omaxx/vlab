@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from ipaddress import IPv4Interface
 from typing import Literal, Self
 import xml.etree.ElementTree as ET
@@ -10,27 +10,28 @@ from .meta import tag
 class VNet:
     """libvirt network: isolated L2 bridge, optional host IP and forwarding.
 
-    nodes: vlab nodes using this network (metadata). Empty = created outside vlab, never started/stopped by vlab.
+    devices: vlab metadata. None = created outside vlab (no metadata), never started/stopped by vlab.
+    A list (may be empty, e.g. shared mgmt network) = managed by vlab; names = devices owning it.
     """
 
     name: str
     bridge: str | None = None  # default: same as name
     ip: str | None = None  # host IP with prefix, e.g. "172.255.1.254/24"
     forward: Literal["nat", "route", "open"] | None = None  # None = isolated
-    nodes: list[str] = field(default_factory=list)
+    devices: list[str] | None = None
 
     @property
     def managed(self) -> bool:
-        return bool(self.nodes)
+        return self.devices is not None
 
     def to_xml(self) -> str:
         net = ET.Element("network")
         ET.SubElement(net, "name").text = self.name
-        if self.nodes:
+        if self.devices is not None:
             meta = ET.SubElement(ET.SubElement(net, "metadata"), tag("network"))
-            nodes = ET.SubElement(meta, tag("nodes"))
-            for n in self.nodes:
-                ET.SubElement(nodes, tag("node")).text = n
+            devices = ET.SubElement(meta, tag("devices"))
+            for n in self.devices:
+                ET.SubElement(devices, tag("device")).text = n
         if self.forward:
             ET.SubElement(net, "forward", mode=self.forward)
         ET.SubElement(net, "bridge", name=self.bridge or self.name, stp="off", delay="0")
@@ -46,11 +47,11 @@ class VNet:
         bridge = net.find("bridge")
         forward = net.find("forward")
         ip = net.find("ip")
-        nodes = net.iterfind(f"metadata/{tag('network')}/{tag('nodes')}/{tag('node')}")
+        meta = net.find(f"metadata/{tag('network')}")
         return cls(
             name=net.findtext("name", ""),
             bridge=bridge.get("name") if bridge is not None else None,
             ip=f"{ip.get('address')}/{ip.get('prefix')}" if ip is not None and ip.get("prefix") else None,
             forward=forward.get("mode") if forward is not None else None,  # type: ignore[arg-type]
-            nodes=[n.text or "" for n in nodes],
+            devices=[d.text or "" for d in meta.iterfind(f"{tag('devices')}/{tag('device')}")] if meta is not None else None,
         )

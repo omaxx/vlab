@@ -64,16 +64,16 @@ def test_bridge_interface(validate_xml, tmp_path):
 
 
 def test_node_metadata(validate_xml, tmp_path):
-    xml = make_vm(node="r1").to_xml(Host())
+    xml = make_vm(device="r1").to_xml(Host())
     ns = "{https://omaxx.net/vlab}"
-    assert ET.fromstring(xml).findtext(f"metadata/{ns}domain/{ns}node") == "r1"
+    assert ET.fromstring(xml).findtext(f"metadata/{ns}domain/{ns}device") == "r1"
     validate_xml(xml, "domain", tmp_path)
     assert "metadata" not in make_vm().to_xml(Host())
 
 
 def test_from_xml_roundtrip():
     vm = VM(
-        "r1", node="r1", vcpus=2, memory=2048,
+        "r1", device="r1", vcpus=2, memory=2048,
         interfaces=[Interface(network="mgmt-1", mac="c0:ff:ee:01:00:01"), Interface(bridge="br0", mac="c0:ff:ee:01:00:02")],
     )
     back = VM.from_xml(vm.to_xml(Host()))
@@ -90,5 +90,5 @@ def test_from_xml_libvirt_running_domain():
       <devices><interface type='network'><mac address='c0:ff:ee:01:00:01'/>
       <source network='mgmt-1' portid='abc' bridge='mgmt-1'/><model type='virtio'/></interface></devices></domain>"""
     vm = VM.from_xml(xml)
-    assert (vm.memory, vm.uefi, vm.seed, vm.node) == (4096, True, False, None)
+    assert (vm.memory, vm.uefi, vm.seed, vm.device) == (4096, True, False, None)
     assert vm.interfaces == [Interface(network="mgmt-1", mac="c0:ff:ee:01:00:01")]

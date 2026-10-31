@@ -4,16 +4,17 @@ import logging
 from mashumaro import DataClassDictMixin
 
 from ..host import Host
-from ..virt import VM, VNet, define_vm, define_vnet, delete_vms, list_vnets, start_vms, stop_vms
+from ..virt import VM, VNet, define_vm, delete_vms, start_vms, stop_vms
+from .network import define_missing_vnets
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Node(DataClassDictMixin):
-    """Lab node: one or more VMs plus internal VNets. Each node type decides how its VMs are named.
+class Device(DataClassDictMixin):
+    """Lab device: one or more VMs plus internal VNets. Each device type decides how its VMs are named.
 
-    Every VM carries node=name and every internal VNet nodes=[name] as libvirt metadata.
+    Every VM carries device=name and every internal VNet devices=[name] as libvirt metadata.
     """
 
     name: str
@@ -22,7 +23,7 @@ class Node(DataClassDictMixin):
         raise NotImplementedError
 
     def vnets(self) -> list[VNet]:
-        """Internal networks of this node."""
+        """Internal networks of this device."""
         return []
 
     def prepare(self, host: Host, overwrite: bool) -> None:
@@ -30,10 +31,7 @@ class Node(DataClassDictMixin):
 
     def deploy(self, host: Host, overwrite: bool = False) -> None:
         """Define missing internal VNets, prepare files, define VMs (not started)."""
-        existing = {vnet.name for vnet, _ in list_vnets(host)}
-        for vnet in self.vnets():
-            if vnet.name not in existing:
-                define_vnet(host, vnet)
+        define_missing_vnets(host, self.vnets())
         self.prepare(host, overwrite)
         for vm in self.vms():
             define_vm(host, vm)

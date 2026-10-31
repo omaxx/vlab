@@ -65,13 +65,13 @@ def test_define_vm(host, conn):
 @pytest.fixture
 def lab(host, conn):
     """r1 on its own managed lab-1, r1+r2 on shared managed link-12, both on unmanaged infra and a bridge."""
-    define_vnet(host, VNet("lab-1", nodes=["r1"]))
-    define_vnet(host, VNet("link-12", nodes=["r1", "r2"]))
+    define_vnet(host, VNet("lab-1", devices=["r1"]))
+    define_vnet(host, VNet("link-12", devices=["r1", "r2"]))
     define_vnet(host, VNet("infra"))
     conn.networkLookupByName("infra").create()
     for name, nets in (("r1", ["lab-1", "link-12", "infra"]), ("r2", ["link-12", "infra"])):
         ifaces = [Interface(network=n) for n in nets] + [Interface(bridge="br0")]
-        define_vm(host, VM(name, node=name, interfaces=ifaces))
+        define_vm(host, VM(name, device=name, interfaces=ifaces))
     return conn
 
 
@@ -80,11 +80,11 @@ def active_nets(conn) -> set[str]:
 
 
 def test_list(host, lab):
-    vms = {vm.name: (vm.node, active) for vm, active in list_vms(host)}
+    vms = {vm.name: (vm.device, active) for vm, active in list_vms(host)}
     assert vms["r1"] == ("r1", False) and vms["r2"] == ("r2", False)
-    nets = {vnet.name: (vnet.nodes, active) for vnet, active in list_vnets(host)}
+    nets = {vnet.name: (vnet.devices, active) for vnet, active in list_vnets(host)}
     assert nets["link-12"] == (["r1", "r2"], False)
-    assert nets["infra"] == ([], True)
+    assert nets["infra"] == (None, True)
 
 
 def test_start_vms_starts_managed_vnets(host, lab):
