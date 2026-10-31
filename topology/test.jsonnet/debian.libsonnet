@@ -1,0 +1,13 @@
+// Debian VM on mgmt-1 (NAT) + p2p-1 + p2p-2, IPs end with id
+{
+  debian(id):: {
+    id: id,
+    user: 'omaxx',
+    ssh_key_files: ['/home/omaxx/.ssh/id_ed25519.pub', '/home/omaxx/.ssh/authorized_keys'],
+    ports: [
+      { network: 'mgmt-1', ip: '172.255.1.%d/24' % id, gateway: '172.255.1.254', dns: ['172.255.1.254'] },
+      { network: 'p2p-1', ip: '192.168.1.%d/24' % id },
+      { network: 'p2p-2', ip: '192.168.2.%d/24' % id },
+    ],
+  },
+}
