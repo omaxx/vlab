@@ -3,7 +3,7 @@ import subprocess
 
 
 @dataclass
-class Node:
+class Host:
     """Host running the VMs.
 
     Every operation is a separate process started via run(), so it can later be sent over ssh.

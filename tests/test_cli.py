@@ -8,7 +8,7 @@ from conftest import TOPOLOGY
 
 def test_deploy(monkeypatch):
     deployed = []
-    monkeypatch.setattr(Debian, "deploy", lambda self, node: deployed.append((self.name, node)))
+    monkeypatch.setattr(Debian, "deploy", lambda self, host: deployed.append((self.name, host)))
     r = CliRunner().invoke(cli.main, ["deploy", "-f", str(TOPOLOGY / "test.yaml/vm-1.yaml")])
     assert r.exit_code == 0, r.output
     assert [name for name, _ in deployed] == ["vm-01"]

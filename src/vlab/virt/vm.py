@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 
-from ..node import Node
+from ..host import Host
 
 
 @dataclass
@@ -15,7 +15,7 @@ class Interface:
 class VM:
     """libvirt domain: UEFI q35 VM with qcow2 disk, optional cloud-init seed, serial console.
 
-    Disk and seed live in node.vm_dir(name): <name>.qcow2, seed.iso.
+    Disk and seed live in host.vm_dir(name): <name>.qcow2, seed.iso.
     Controllers, PCI addresses, loader and NVRAM paths are filled in by libvirt on define.
     """
 
@@ -26,8 +26,8 @@ class VM:
     interfaces: list[Interface] = field(default_factory=list)
     uefi: bool = True  # BIOS boot loops on this host
 
-    def to_xml(self, node: Node) -> str:
-        vm_dir = node.vm_dir(self.name)
+    def to_xml(self, host: Host) -> str:
+        vm_dir = host.vm_dir(self.name)
         dom = ET.Element("domain", type="kvm")
         ET.SubElement(dom, "name").text = self.name
         ET.SubElement(dom, "memory", unit="MiB").text = str(self.memory)

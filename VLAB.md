@@ -1,4 +1,4 @@
-# Setup Node
+# Setup Host
 
 Debian 13, 96 vCPU / 188G RAM, KVM available (`/dev/kvm`, kvm_intel loaded). Root disk only 30G — put images on bigger storage if needed.
 

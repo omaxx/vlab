@@ -2,7 +2,7 @@
 
 import pytest
 
-from vlab.node import Node
+from vlab.host import Host
 from vlab.virt import VM, VNet, api, define_vm, define_vnet
 
 
@@ -40,17 +40,17 @@ def conns(monkeypatch):
 
 
 def test_define_vm(conns):
-    node, vm = Node(libvirt_uri="qemu+ssh://lab/system"), VM("vm-01")
-    define_vm(node, vm)
+    host, vm = Host(libvirt_uri="qemu+ssh://lab/system"), VM("vm-01")
+    define_vm(host, vm)
     (conn,) = conns
     assert conn.uri == "qemu+ssh://lab/system"
-    assert conn.calls == [("defineXML", vm.to_xml(node))]
+    assert conn.calls == [("defineXML", vm.to_xml(host))]
     assert conn.closed
 
 
 def test_define_vnet(conns):
     vnet = VNet("mgmt-1", ip="172.255.1.254/24", forward="nat")
-    define_vnet(Node(), vnet)
+    define_vnet(Host(), vnet)
     (conn,) = conns
     assert conn.uri == "qemu:///system"
     assert conn.calls == [("networkDefineXML", vnet.to_xml())]
@@ -61,5 +61,5 @@ def test_connection_closed_on_error(monkeypatch):
     opened: list[FakeConn] = []
     monkeypatch.setattr(api.libvirt, "open", lambda uri: opened.append(FakeConn(uri, fail=True)) or opened[-1])
     with pytest.raises(RuntimeError):
-        define_vnet(Node(), VNet("p2p-1"))
+        define_vnet(Host(), VNet("p2p-1"))
     assert opened[0].closed

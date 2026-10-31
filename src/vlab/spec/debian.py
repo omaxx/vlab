@@ -3,7 +3,7 @@ import json
 
 from mashumaro import DataClassDictMixin
 
-from ..node import Node
+from ..host import Host
 from ..virt import VM, Interface, define_vm
 
 
@@ -25,11 +25,11 @@ class Debian(DataClassDictMixin):
     id: int  # 1-99
     user: str
     ssh_keys: list[str] = field(default_factory=list)
-    ssh_key_files: list[str] = field(default_factory=list)  # absolute paths on node, one key per line
+    ssh_key_files: list[str] = field(default_factory=list)  # absolute paths on host, one key per line
     ports: list[Port] = field(default_factory=list)
     vcpus: int = 1
     memory: int = 4096  # MiB
-    image: str = "debian-13-genericcloud-amd64.qcow2"  # in node.images_dir
+    image: str = "debian-13-genericcloud-amd64.qcow2"  # in host.images_dir
 
     @property
     def name(self) -> str:
@@ -77,19 +77,19 @@ class Debian(DataClassDictMixin):
             ethernets[f"port{n}"] = eth
         return json.dumps({"version": 2, "ethernets": ethernets}, indent=2) + "\n"
 
-    def all_ssh_keys(self, node: Node) -> list[str]:
+    def all_ssh_keys(self, host: Host) -> list[str]:
         keys = list(self.ssh_keys)
         for f in self.ssh_key_files:
-            keys += [k for k in node.read(f).splitlines() if k.strip() and not k.startswith("#")]
+            keys += [k for k in host.read(f).splitlines() if k.strip() and not k.startswith("#")]
         return keys
 
-    def deploy(self, node: Node) -> None:
-        ssh_keys = self.all_ssh_keys(node)  # read first: fail before changing anything
-        d = node.vm_dir(self.name)
-        node.mkdir(d)
-        node.cow(f"{node.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
-        node.write(f"{d}/meta-data", self.meta_data())
-        node.write(f"{d}/user-data", self.user_data(ssh_keys))
-        node.write(f"{d}/network-config", self.network_config())
-        node.seed_iso(f"{d}/seed.iso", f"{d}/user-data", f"{d}/meta-data", f"{d}/network-config")
-        define_vm(node, self.vm())
+    def deploy(self, host: Host) -> None:
+        ssh_keys = self.all_ssh_keys(host)  # read first: fail before changing anything
+        d = host.vm_dir(self.name)
+        host.mkdir(d)
+        host.cow(f"{host.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
+        host.write(f"{d}/meta-data", self.meta_data())
+        host.write(f"{d}/user-data", self.user_data(ssh_keys))
+        host.write(f"{d}/network-config", self.network_config())
+        host.seed_iso(f"{d}/seed.iso", f"{d}/user-data", f"{d}/meta-data", f"{d}/network-config")
+        define_vm(host, self.vm())

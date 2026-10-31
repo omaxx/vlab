@@ -4,13 +4,13 @@ import subprocess
 
 import pytest
 
-from vlab.node import Node
+from vlab.host import Host
 
 TOPOLOGY = Path(__file__).parent.parent / "topology"
 
 
-class FakeNode(Node):
-    """Node that records commands instead of running them; `files` serves `cat`."""
+class FakeHost(Host):
+    """Host that records commands instead of running them; `files` serves `cat`."""
 
     def __init__(self, files: dict[str, str] | None = None, **kw):
         super().__init__(**kw)

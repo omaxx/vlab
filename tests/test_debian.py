@@ -5,7 +5,7 @@ import yaml
 from vlab.spec import Debian, Port
 from vlab.spec import debian as debian_mod
 
-from conftest import FakeNode
+from conftest import FakeHost
 
 
 def make(**kw) -> Debian:
@@ -66,21 +66,21 @@ def test_network_config():
 
 
 def test_all_ssh_keys():
-    node = FakeNode(files={"/k/a.pub": "key-a\n", "/k/auth": "# comment\nkey-b\n\nkey-c\n"})
+    host = FakeHost(files={"/k/a.pub": "key-a\n", "/k/auth": "# comment\nkey-b\n\nkey-c\n"})
     d = make(ssh_keys=["key-inline"], ssh_key_files=["/k/a.pub", "/k/auth"])
-    assert d.all_ssh_keys(node) == ["key-inline", "key-a", "key-b", "key-c"]
+    assert d.all_ssh_keys(host) == ["key-inline", "key-a", "key-b", "key-c"]
 
 
 def test_deploy(monkeypatch):
     defined = []
-    monkeypatch.setattr(debian_mod, "define_vm", lambda node, vm: defined.append((node, vm)))
-    node = FakeNode(files={"/k/a.pub": "key-a\n"})
+    monkeypatch.setattr(debian_mod, "define_vm", lambda host, vm: defined.append((host, vm)))
+    host = FakeHost(files={"/k/a.pub": "key-a\n"})
     d = make(ssh_key_files=["/k/a.pub"])
 
-    d.deploy(node)
+    d.deploy(host)
 
     vm_dir = "/var/lib/vlab/vms/vm-03"
-    assert node.commands() == [
+    assert host.commands() == [
         ("cat", "/k/a.pub"),
         ("mkdir", "-p", vm_dir),
         ("qemu-img", "create", "-f", "qcow2", "-F", "qcow2",
@@ -91,10 +91,10 @@ def test_deploy(monkeypatch):
         ("cloud-localds", "-N", f"{vm_dir}/network-config",
          f"{vm_dir}/seed.iso", f"{vm_dir}/user-data", f"{vm_dir}/meta-data"),
     ]
-    written = {cmd[1]: inp for cmd, inp in node.calls if cmd[0] == "tee"}
+    written = {cmd[1]: inp for cmd, inp in host.calls if cmd[0] == "tee"}
     assert yaml.safe_load(written[f"{vm_dir}/user-data"])["users"][0]["ssh_authorized_keys"] == ["key-a"]
     assert written[f"{vm_dir}/network-config"] == d.network_config()
-    assert defined == [(node, d.vm())]
+    assert defined == [(host, d.vm())]
 
 
 def test_from_dict_defaults():
