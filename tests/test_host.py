@@ -63,3 +63,11 @@ def test_seed_iso(host, tmp_path, with_net):
     net = f"{tmp_path}/network-config" if with_net else None
     host.seed_iso(f"{tmp_path}/seed.iso", f"{tmp_path}/user-data", f"{tmp_path}/meta-data", net)
     assert host.exists(f"{tmp_path}/seed.iso")
+
+
+def test_libvirt_uri():
+    assert Host().libvirt_uri == "qemu:///system"
+    assert Host(ip="10.0.0.5").libvirt_uri == "qemu+ssh://10.0.0.5/system"
+    assert Host(ip="10.0.0.5", uri="test:///default").libvirt_uri == "test:///default"
+    assert str(Host()) == "localhost"
+    assert str(Host(ip="10.0.0.5")) == "10.0.0.5"

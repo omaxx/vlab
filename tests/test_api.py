@@ -40,7 +40,7 @@ def conns(monkeypatch):
 
 
 def test_define_vm(conns):
-    host, vm = Host(libvirt_uri="qemu+ssh://lab/system"), VM("vm-01")
+    host, vm = Host(uri="qemu+ssh://lab/system"), VM("vm-01")
     define_vm(host, vm)
     (conn,) = conns
     assert conn.uri == "qemu+ssh://lab/system"

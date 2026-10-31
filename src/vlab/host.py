@@ -4,13 +4,23 @@ import subprocess
 
 @dataclass
 class Host:
-    """Host running the VMs.
+    """Host (hypervisor) running the VMs.
 
     Every operation is a separate process started via run(), so it can later be sent over ssh.
     """
 
+    ip: str | None = None  # None = local host
     vm_path: str = "/var/lib/vlab"
-    libvirt_uri: str = "qemu:///system"  # remote later: qemu+ssh://<host>/system
+    uri: str | None = None  # libvirt URI override, e.g. "test:///default"
+
+    @property
+    def libvirt_uri(self) -> str:
+        if self.uri:
+            return self.uri
+        return "qemu:///system" if self.ip is None else f"qemu+ssh://{self.ip}/system"
+
+    def __str__(self) -> str:
+        return self.ip or "localhost"
 
     @property
     def images_dir(self) -> str:

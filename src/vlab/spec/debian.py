@@ -43,7 +43,7 @@ class Debian(DataClassDictMixin):
             name=self.name,
             vcpus=self.vcpus,
             memory=self.memory,
-            interfaces=[Interface(p.network, self.mac(n)) for n, p in enumerate(self.ports, 1)],
+            interfaces=[Interface(network=p.network, mac=self.mac(n)) for n, p in enumerate(self.ports, 1)],
         )
 
     # cloud-init files: JSON is valid YAML, so no YAML library or manual quoting needed
