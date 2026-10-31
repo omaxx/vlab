@@ -1,23 +1,26 @@
 from dataclasses import dataclass, field
 import json
-
-from mashumaro import DataClassDictMixin
+import logging
 
 from ..host import Host
-from ..virt import VM, Interface, define_vm
+from ..virt import VM, Interface
+from .node import Node
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Port:
-    network: str  # libvirt network name
+    network: str | None = None  # libvirt network name, or
     ip: str | None = None  # with prefix, e.g. "172.255.1.1/24"
     gateway: str | None = None
     dns: list[str] = field(default_factory=list)
+    bridge: str | None = None  # host bridge instead of network
 
 
 @dataclass
-class Debian(DataClassDictMixin):
-    """Debian cloud image VM: qcow2 overlay on base image + cloud-init seed, defined on libvirt (not started).
+class Debian(Node):
+    """Plain Debian cloud image node: one VM named like the node, qcow2 overlay on base image + cloud-init seed.
 
     MAC of port N (1-based): c0:ff:ee:<id>:00:<N>, id as 2 decimal digits.
     """
@@ -31,20 +34,21 @@ class Debian(DataClassDictMixin):
     memory: int = 4096  # MiB
     image: str = "debian-13-genericcloud-amd64.qcow2"  # in host.images_dir
 
-    @property
-    def name(self) -> str:
-        return f"vm-{self.id:02d}"
-
     def mac(self, n: int) -> str:
         return f"c0:ff:ee:{self.id:02d}:00:{n:02d}"
 
-    def vm(self) -> VM:
-        return VM(
-            name=self.name,
-            vcpus=self.vcpus,
-            memory=self.memory,
-            interfaces=[Interface(network=p.network, mac=self.mac(n)) for n, p in enumerate(self.ports, 1)],
-        )
+    def vms(self) -> list[VM]:
+        return [
+            VM(
+                name=self.name,
+                node=self.name,
+                vcpus=self.vcpus,
+                memory=self.memory,
+                interfaces=[
+                    Interface(network=p.network, bridge=p.bridge, mac=self.mac(n)) for n, p in enumerate(self.ports, 1)
+                ],
+            )
+        ]
 
     # cloud-init files: JSON is valid YAML, so no YAML library or manual quoting needed
 
@@ -83,13 +87,19 @@ class Debian(DataClassDictMixin):
             keys += [k for k in host.read(f).splitlines() if k.strip() and not k.startswith("#")]
         return keys
 
-    def deploy(self, host: Host) -> None:
-        ssh_keys = self.all_ssh_keys(host)  # read first: fail before changing anything
+    def prepare(self, host: Host, overwrite: bool) -> None:
         d = host.vm_dir(self.name)
+        exists = host.exists(d)
+        if exists and not overwrite:
+            logger.info("%s: VM `%s`: files kept", host, self.name)
+            return
+        ssh_keys = self.all_ssh_keys(host)  # read first: fail before changing anything
+        if exists:
+            host.rm(d)
         host.mkdir(d)
         host.cow(f"{host.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
         host.write(f"{d}/meta-data", self.meta_data())
         host.write(f"{d}/user-data", self.user_data(ssh_keys))
         host.write(f"{d}/network-config", self.network_config())
         host.seed_iso(f"{d}/seed.iso", f"{d}/user-data", f"{d}/meta-data", f"{d}/network-config")
-        define_vm(host, self.vm())
+        logger.info("%s: VM `%s`: files %s", host, self.name, "rewritten" if exists else "created")

@@ -10,6 +10,7 @@ dependencies = [
     "libvirt-python>=12.8.0",
     "mashumaro>=3.23",
     "pyyaml>=6.0.3",
+    "rich>=15.0.0",
 ]
 
 [project.scripts]

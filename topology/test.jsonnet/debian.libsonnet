@@ -1,6 +1,7 @@
 // Debian VM on mgmt-1 (NAT) + p2p-1 + p2p-2, IPs end with id
 {
   debian(id):: {
+    name: 'vm-%02d' % id,
     id: id,
     user: 'omaxx',
     ssh_key_files: ['/home/omaxx/.ssh/id_ed25519.pub', '/home/omaxx/.ssh/authorized_keys'],

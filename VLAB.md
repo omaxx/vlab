@@ -246,3 +246,25 @@ virsh undefine $name --nvram
 rm -r /var/lib/vlab/vms/$name
 ssh-keygen -R 172.255.1.$n
 ```
+
+## vlab CLI
+
+Node = lab device (spec file) → 1+ VMs + internal VNets, tagged in libvirt `<metadata>` (ns `https://omaxx.net/vlab`).
+Only VNets with vlab metadata are started/stopped (stopped when no running VM uses them); others are never touched.
+
+```shell
+# deploy node (define VNets + VMs, not started); keeps existing VM files unless --overwrite
+uv run vlab -v deploy -f topology/test.yaml/vm-1.yaml
+uv run vlab -v deploy -f topology/test.jsonnet/vm-2.jsonnet --overwrite
+
+# start / stop: VM names, -n NODE (repeatable) or --all (VMs with vlab metadata)
+uv run vlab -v start --all
+uv run vlab -v stop -n vm-01
+
+# delete VMs (+ UEFI NVRAM); VM folders removed unless --keep-files
+uv run vlab -v delete -n vm-02 --keep-files
+
+# show (running = green); -vv = debug incl. XML
+uv run vlab list vms
+uv run vlab list vnets
+```

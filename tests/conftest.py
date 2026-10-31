@@ -10,17 +10,19 @@ TOPOLOGY = Path(__file__).parent.parent / "topology"
 
 
 class FakeHost(Host):
-    """Host that records commands instead of running them; `files` serves `cat`."""
+    """Host that records commands instead of running them; `files` serves `cat`, `existing` answers `test -e`."""
 
-    def __init__(self, files: dict[str, str] | None = None, **kw):
+    def __init__(self, files: dict[str, str] | None = None, existing: set[str] | None = None, **kw):
         super().__init__(**kw)
         self.files = files or {}
+        self.existing = existing or set()
         self.calls: list[tuple[tuple[str, ...], str | None]] = []
 
     def _proc(self, cmd, input, check):
         self.calls.append((cmd, input))
         stdout = self.files.get(cmd[1], "") if cmd[0] == "cat" else ""
-        return subprocess.CompletedProcess(cmd, 0, stdout, "")
+        rc = 0 if cmd[:2] != ("test", "-e") or cmd[2] in self.existing else 1
+        return subprocess.CompletedProcess(cmd, rc, stdout, "")
 
     def commands(self) -> list[tuple[str, ...]]:
         return [c for c, _ in self.calls]
