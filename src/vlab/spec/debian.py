@@ -84,11 +84,12 @@ class Debian(DataClassDictMixin):
         return keys
 
     def deploy(self, node: Node) -> None:
+        ssh_keys = self.all_ssh_keys(node)  # read first: fail before changing anything
         d = node.vm_dir(self.name)
         node.mkdir(d)
         node.cow(f"{node.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
         node.write(f"{d}/meta-data", self.meta_data())
-        node.write(f"{d}/user-data", self.user_data(self.all_ssh_keys(node)))
+        node.write(f"{d}/user-data", self.user_data(ssh_keys))
         node.write(f"{d}/network-config", self.network_config())
         node.seed_iso(f"{d}/seed.iso", f"{d}/user-data", f"{d}/meta-data", f"{d}/network-config")
         define_vm(node, self.vm())
