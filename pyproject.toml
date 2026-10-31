@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "click>=8.5.0",
     "jsonnet>=0.22.0",
     "libvirt-python>=12.8.0",
     "mashumaro>=3.23",
