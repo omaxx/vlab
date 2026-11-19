@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import cached_property
 import subprocess
 
 
@@ -7,6 +8,7 @@ class Host:
     """Host (hypervisor) running the VMs.
 
     Every operation is a separate process started via run(), so it can later be sent over ssh.
+    Paths may start with "~", expanded to $HOME of the host.
     """
 
     ip: str | None = None  # None = local host
@@ -36,34 +38,42 @@ class Host:
         """Run command, return stdout; raise CalledProcessError on non-zero exit."""
         return self._proc(cmd, input, check=True).stdout
 
+    @cached_property
+    def home(self) -> str:
+        return self.run("printenv", "HOME").strip()
+
+    def expand(self, path: str) -> str:
+        """~ or ~/... -> $HOME of the host (no shell runs commands, so nothing else expands it)."""
+        return self.home + path[1:] if path == "~" or path.startswith("~/") else path
+
     def exists(self, path: str) -> bool:
-        return self._proc(("test", "-e", path), None, check=False).returncode == 0
+        return self._proc(("test", "-e", self.expand(path)), None, check=False).returncode == 0
 
     def mkdir(self, path: str) -> None:
-        self.run("mkdir", "-p", path)
+        self.run("mkdir", "-p", self.expand(path))
 
     def cp(self, src: str, dst: str) -> None:
-        self.run("cp", src, dst)
+        self.run("cp", self.expand(src), self.expand(dst))
 
     def cow(self, base: str, dst: str) -> None:
         """Create qcow2 overlay dst backed by base (base must stay unchanged)."""
-        self.run("qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", base, dst)
+        self.run("qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", self.expand(base), self.expand(dst))
 
     def resize(self, path: str, size: str) -> None:
         """Grow disk image, size e.g. "20G"."""
-        self.run("qemu-img", "resize", path, size)
+        self.run("qemu-img", "resize", self.expand(path), size)
 
     def read(self, path: str) -> str:
-        return self.run("cat", path)
+        return self.run("cat", self.expand(path))
 
     def write(self, path: str, content: str) -> None:
-        self.run("tee", path, input=content)
+        self.run("tee", self.expand(path), input=content)
 
     def rm(self, path: str) -> None:
         """Remove file or directory tree."""
-        self.run("rm", "-r", path)
+        self.run("rm", "-r", self.expand(path))
 
     def seed_iso(self, iso: str, user_data: str, meta_data: str, network_config: str | None = None) -> None:
         """Build cloud-init NoCloud seed iso from existing files."""
-        net = ("-N", network_config) if network_config else ()
-        self.run("cloud-localds", *net, iso, user_data, meta_data)
+        net = ("-N", self.expand(network_config)) if network_config else ()
+        self.run("cloud-localds", *net, self.expand(iso), self.expand(user_data), self.expand(meta_data))

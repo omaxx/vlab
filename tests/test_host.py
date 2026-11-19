@@ -71,3 +71,26 @@ def test_libvirt_uri():
     assert Host(ip="10.0.0.5", uri="test:///default").libvirt_uri == "test:///default"
     assert str(Host()) == "localhost"
     assert str(Host(ip="10.0.0.5")) == "10.0.0.5"
+
+
+def test_expand_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    h = Host()
+    assert h.expand("~") == str(tmp_path)
+    assert h.expand("~/.ssh/k.pub") == f"{tmp_path}/.ssh/k.pub"
+    assert h.expand("/abs/~/x") == "/abs/~/x"
+    assert h.expand("~other/x") == "~other/x"  # other users' homes not supported
+    h.mkdir("~/.ssh")
+    h.write("~/.ssh/k.pub", "key\n")
+    assert h.read("~/.ssh/k.pub") == "key\n"
+    assert (tmp_path / ".ssh/k.pub").read_text() == "key\n"
+
+
+def test_home_fetched_once_and_only_for_tilde():
+    from conftest import FakeHost
+    h = FakeHost(files={"/abs": "x"})
+    h.read("/abs")
+    assert h.commands() == [("cat", "/abs")]
+    h.read("~/a")
+    h.read("~/b")
+    assert [c for c in h.commands() if c[0] == "printenv"] == [("printenv", "HOME")]

@@ -28,7 +28,7 @@ class Debian(Device):
     id: int  # 1-99
     user: str
     ssh_keys: list[str] = field(default_factory=list)
-    ssh_key_files: list[str] = field(default_factory=list)  # absolute paths on host, one key per line
+    ssh_key_files: list[str] = field(default_factory=list)  # paths on host (~ allowed), one key per line
     ports: list[Port] = field(default_factory=list)
     vcpus: int = 1
     memory: int = 4096  # MiB

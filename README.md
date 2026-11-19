@@ -33,7 +33,7 @@ name: vm-01
 id: 1                     # MACs c0:ff:ee:01:00:<port>
 user: omaxx
 ssh_key_files:
-  - /home/omaxx/.ssh/id_ed25519.pub
+  - ~/.ssh/id_ed25519.pub
 ports:
   - network: mgmt-1
     ip: 172.255.1.1/24
