@@ -1,6 +1,6 @@
 name: vm-02
 id: 2
-user: omaxx
+user: $USER
 ssh_key_files:
   - ~/.ssh/id_ed25519.pub
   - ~/.ssh/authorized_keys

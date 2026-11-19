@@ -10,18 +10,27 @@ TOPOLOGY = Path(__file__).parent.parent / "topology"
 
 
 class FakeHost(Host):
-    """Host that records commands instead of running them; `files` serves `cat`, `existing` answers `test -e`."""
+    """Host that records commands instead of running them.
 
-    def __init__(self, files: dict[str, str] | None = None, existing: set[str] | None = None, **kw):
+    `files` serves `cat`, `existing` answers `test -e`, `env` answers `printenv`.
+    """
+
+    def __init__(self, files=None, existing=None, env=None, **kw):
         super().__init__(**kw)
-        self.files = files or {}
-        self.existing = existing or set()
+        self.files: dict[str, str] = files or {}
+        self.existing: set[str] = existing or set()
+        self.env: dict[str, str] = {"HOME": "/home/test", "USER": "test"} if env is None else env
         self.calls: list[tuple[tuple[str, ...], str | None]] = []
 
     def _proc(self, cmd, input, check):
         self.calls.append((cmd, input))
-        stdout = self.files.get(cmd[1], "") if cmd[0] == "cat" else ""
-        rc = 0 if cmd[:2] != ("test", "-e") or cmd[2] in self.existing else 1
+        rc, stdout = 0, ""
+        if cmd[0] == "cat":
+            stdout = self.files.get(cmd[1], "")
+        elif cmd[:2] == ("test", "-e"):
+            rc = 0 if cmd[2] in self.existing else 1
+        elif cmd[0] == "printenv":
+            rc, stdout = (0, self.env[cmd[1]] + "\n") if cmd[1] in self.env else (1, "")
         return subprocess.CompletedProcess(cmd, rc, stdout, "")
 
     def commands(self) -> list[tuple[str, ...]]:

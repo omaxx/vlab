@@ -94,3 +94,15 @@ def test_home_fetched_once_and_only_for_tilde():
     h.read("~/a")
     h.read("~/b")
     assert [c for c in h.commands() if c[0] == "printenv"] == [("printenv", "HOME")]
+
+
+def test_expand_vars(monkeypatch):
+    monkeypatch.setenv("VLAB_A", "alice")
+    h = Host()
+    assert h.expand_vars("$VLAB_A") == "alice"
+    assert h.expand_vars("${VLAB_A}-x/$VLAB_A") == "alice-x/alice"
+    assert h.expand_vars("plain") == "plain"
+    monkeypatch.delenv("VLAB_UNSET", raising=False)
+    import pytest
+    with pytest.raises(KeyError, match="VLAB_UNSET"):
+        h.expand_vars("$VLAB_UNSET")

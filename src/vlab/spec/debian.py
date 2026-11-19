@@ -26,7 +26,7 @@ class Debian(Device):
     """
 
     id: int  # 1-99
-    user: str
+    user: str  # $VAR allowed, e.g. $USER: taken from host env at deploy
     ssh_keys: list[str] = field(default_factory=list)
     ssh_key_files: list[str] = field(default_factory=list)  # paths on host (~ allowed), one key per line
     ports: list[Port] = field(default_factory=list)
@@ -55,11 +55,11 @@ class Debian(Device):
     def meta_data(self) -> str:
         return json.dumps({"instance-id": self.name, "local-hostname": self.name}, indent=2) + "\n"
 
-    def user_data(self, ssh_keys: list[str]) -> str:
+    def user_data(self, user: str, ssh_keys: list[str]) -> str:
         cfg = {
             "users": [
                 {
-                    "name": self.user,
+                    "name": user,
                     "shell": "/bin/bash",
                     "sudo": "ALL=(ALL) NOPASSWD:ALL",
                     "ssh_authorized_keys": ssh_keys,
@@ -93,13 +93,14 @@ class Debian(Device):
         if exists and not overwrite:
             logger.info("%s: VM `%s`: files kept", host, self.name)
             return
-        ssh_keys = self.all_ssh_keys(host)  # read first: fail before changing anything
+        user = host.expand_vars(self.user)  # resolve first: fail before changing anything
+        ssh_keys = self.all_ssh_keys(host)
         if exists:
             host.rm(d)
         host.mkdir(d)
         host.cow(f"{host.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
         host.write(f"{d}/meta-data", self.meta_data())
-        host.write(f"{d}/user-data", self.user_data(ssh_keys))
+        host.write(f"{d}/user-data", self.user_data(user, ssh_keys))
         host.write(f"{d}/network-config", self.network_config())
         host.seed_iso(f"{d}/seed.iso", f"{d}/user-data", f"{d}/meta-data", f"{d}/network-config")
         logger.info("%s: VM `%s`: files %s", host, self.name, "rewritten" if exists else "created")

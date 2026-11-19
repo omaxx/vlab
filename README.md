@@ -31,7 +31,7 @@ forward: nat
 ```yaml
 name: vm-01
 id: 1                     # MACs c0:ff:ee:01:00:<port>
-user: omaxx
+user: $USER
 ssh_key_files:
   - ~/.ssh/id_ed25519.pub
 ports:

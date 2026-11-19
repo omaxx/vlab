@@ -14,7 +14,7 @@ def make(**kw) -> Debian:
     return Debian(
         name="r3",
         id=3,
-        user="omaxx",
+        user="$USER",
         ports=[
             Port("mgmt-1", "172.255.1.3/24", gateway="172.255.1.254", dns=["172.255.1.254"]),
             Port("p2p-1", "192.168.1.3/24"),
@@ -50,10 +50,10 @@ def test_meta_data_is_yaml():
 
 
 def test_user_data():
-    text = make().user_data(["ssh-ed25519 AAAA key: with colon"])
+    text = make().user_data("alice", ["ssh-ed25519 AAAA key: with colon"])
     assert text.startswith("#cloud-config\n")
     user = yaml.safe_load(text)["users"][0]
-    assert user["name"] == "omaxx"
+    assert user["name"] == "alice"
     assert user["sudo"] == "ALL=(ALL) NOPASSWD:ALL"
     assert user["ssh_authorized_keys"] == ["ssh-ed25519 AAAA key: with colon"]
 
@@ -90,9 +90,12 @@ def test_prepare_new():
     host = FakeHost(files={"/k/a.pub": "key-a\n"})
     d = make(ssh_key_files=["/k/a.pub"])
     d.prepare(host, overwrite=False)
-    assert host.commands() == [("test", "-e", VM_DIR), ("cat", "/k/a.pub"), ("mkdir", "-p", VM_DIR), *NEW_FILES]
+    assert host.commands() == [
+        ("test", "-e", VM_DIR), ("printenv", "USER"), ("cat", "/k/a.pub"), ("mkdir", "-p", VM_DIR), *NEW_FILES,
+    ]
     written = {cmd[1]: inp for cmd, inp in host.calls if cmd[0] == "tee"}
-    assert yaml.safe_load(written[f"{VM_DIR}/user-data"])["users"][0]["ssh_authorized_keys"] == ["key-a"]
+    user = yaml.safe_load(written[f"{VM_DIR}/user-data"])["users"][0]
+    assert (user["name"], user["ssh_authorized_keys"]) == ("test", ["key-a"])  # $USER of the host
     assert written[f"{VM_DIR}/network-config"] == d.network_config()
 
 
@@ -106,8 +109,22 @@ def test_prepare_existing_overwritten():
     host = FakeHost(existing={VM_DIR}, files={"/k/a.pub": "key-a\n"})
     make(ssh_key_files=["/k/a.pub"]).prepare(host, overwrite=True)
     assert host.commands() == [
-        ("test", "-e", VM_DIR), ("cat", "/k/a.pub"), ("rm", "-r", VM_DIR), ("mkdir", "-p", VM_DIR), *NEW_FILES,
+        ("test", "-e", VM_DIR), ("printenv", "USER"), ("cat", "/k/a.pub"), ("rm", "-r", VM_DIR),
+        ("mkdir", "-p", VM_DIR), *NEW_FILES,
     ]
+
+
+def test_prepare_unset_var_fails_before_changes():
+    host = FakeHost(env={})
+    with pytest.raises(KeyError, match=r"\$USER not set"):
+        make().prepare(host, overwrite=False)
+    assert host.commands() == [("test", "-e", VM_DIR), ("printenv", "USER")]
+
+
+def test_literal_user():
+    host = FakeHost()
+    Debian(name="r3", id=3, user="bob").prepare(host, overwrite=False)
+    assert ("printenv", "USER") not in host.commands()
 
 
 def test_from_dict():

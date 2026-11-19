@@ -3,7 +3,7 @@
   debian(id):: {
     name: 'vm-%02d' % id,
     id: id,
-    user: 'omaxx',
+    user: '$USER',
     ssh_key_files: ['~/.ssh/id_ed25519.pub', '~/.ssh/authorized_keys'],
     ports: [
       { network: 'mgmt-1', ip: '172.255.1.%d/24' % id, gateway: '172.255.1.254', dns: ['172.255.1.254'] },

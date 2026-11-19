@@ -1,6 +1,8 @@
-from dataclasses import dataclass
-from functools import cached_property
+from dataclasses import dataclass, field
+import re
 import subprocess
+
+VAR = re.compile(r"\$(?:(\w+)|\{(\w+)\})")
 
 
 @dataclass
@@ -8,12 +10,13 @@ class Host:
     """Host (hypervisor) running the VMs.
 
     Every operation is a separate process started via run(), so it can later be sent over ssh.
-    Paths may start with "~", expanded to $HOME of the host.
+    Paths may start with "~", expanded to $HOME of the host; expand_vars() substitutes $VAR from the host env.
     """
 
     ip: str | None = None  # None = local host
     vm_path: str = "/var/lib/vlab"
     uri: str | None = None  # libvirt URI override, e.g. "test:///default"
+    _env: dict[str, str] = field(default_factory=dict, init=False, repr=False, compare=False)
 
     @property
     def libvirt_uri(self) -> str:
@@ -38,9 +41,22 @@ class Host:
         """Run command, return stdout; raise CalledProcessError on non-zero exit."""
         return self._proc(cmd, input, check=True).stdout
 
-    @cached_property
+    def getenv(self, name: str) -> str:
+        """Environment variable of the host (fetched once per name); KeyError if not set."""
+        if name not in self._env:
+            r = self._proc(("printenv", name), None, check=False)
+            if r.returncode != 0:
+                raise KeyError(f"{self}: ${name} not set")
+            self._env[name] = r.stdout.strip()
+        return self._env[name]
+
+    @property
     def home(self) -> str:
-        return self.run("printenv", "HOME").strip()
+        return self.getenv("HOME")
+
+    def expand_vars(self, text: str) -> str:
+        """$VAR / ${VAR} -> host environment value."""
+        return VAR.sub(lambda m: self.getenv(m[1] or m[2]), text)
 
     def expand(self, path: str) -> str:
         """~ or ~/... -> $HOME of the host (no shell runs commands, so nothing else expands it)."""
