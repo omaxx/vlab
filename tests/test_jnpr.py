@@ -60,7 +60,7 @@ def test_double_re():
 
 
 def test_vnets():
-    assert make().vnets() == [VNet("vmx-1~int", devices=["vmx-1"]), VNet("vmx-1~fab", devices=["vmx-1"])]
+    assert make().vnets() == [VNet("vmx-1~int", devices=["vmx-1"], mtu=9100), VNet("vmx-1~fab", devices=["vmx-1"], mtu=9100)]
     with pytest.raises(ValueError, match="too long"):
         make(name="vmx-very-long").vnets()
 
@@ -232,7 +232,7 @@ def test_vqfx_layout():
 
 
 def test_vqfx_vnets_and_images():
-    assert make_vqfx().vnets() == [VNet("vqfx-1~int", devices=["vqfx-1"]), VNet("vqfx-1~res", devices=["vqfx-1"])]
+    assert make_vqfx().vnets() == [VNet("vqfx-1~int", devices=["vqfx-1"], mtu=9100), VNet("vqfx-1~res", devices=["vqfx-1"], mtu=9100)]
     assert make_vqfx().images_dir(Host()) == "/var/lib/vlab/images/junos/vqfx/20.2"
 
 

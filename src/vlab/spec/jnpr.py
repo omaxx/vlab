@@ -8,7 +8,7 @@ import jinja2
 from ..host import Host
 from ..utils import load_file
 from ..virt import VM, DHCPHost, Disk, Interface, SysInfo, VNet
-from .device import Device
+from .device import DEVICE_VNET_MTU, Device
 from .port import Port
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class Junos(Device):
         for net in names:
             if len(net) > IFNAME_MAX:  # bridge named like the network
                 raise ValueError(f"{self.name}: device name too long, bridge {net!r} > {IFNAME_MAX} chars")
-        return [VNet(n, devices=[self.name]) for n in names]
+        return [VNet(n, devices=[self.name], mtu=DEVICE_VNET_MTU) for n in names]
 
     def internal_nic(self, vm: str, suffix: str, mac: str) -> Interface:
         return Interface("network", f"{self.name}~{suffix}", target=_ifname(f"{vm}~{suffix}"), mac=mac)

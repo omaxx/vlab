@@ -210,4 +210,4 @@ def test_p2p_port():
     d = Linux(name="srv-1", id=1, user="u", ports=[Port("mgmt-1"), Port(p2p="srv-1")])
     assert [(i.type, i.source) for i in d.vms()[0].interfaces] == [("network", "mgmt-1"), ("network", "srv-1")]
     from vlab.virt import VNet
-    assert d.device_vnets() == [VNet("srv-1", devices=["srv-1"])]  # mgmt-1 (network:) is not a device network
+    assert d.device_vnets() == [VNet("srv-1", devices=["srv-1"], mtu=9100)]  # mgmt-1 (network:) is not a device network

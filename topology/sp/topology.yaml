@@ -1,5 +1,5 @@
 # SP lab from topology/topology.drawio (diagram "sp"): 10 Juniper vMX
-# P: R1-R4, PE: R5-R8, CE: R10, R20; id = router number, link ip .<id>, loopbacks from the drawing
+# P: R1-R4, PE: R5-R8, CE: R10, R20; id = router number, link ip .<id> (R10/R20: .9), loopbacks from the drawing
 # links are p2p: networks R<a>_R<b>, subnet 10.0.<a><b>.0/24 (R10/R20 count as 9)
 # all devices also on mgmt-1 (networks/mgmt.yaml); fxp0 static ip 172.255.1.<id> (vars interfaces.fxp0), no dhcp
 # config template configs/vmx.conf.j2, its vars in vars/<device>.jsonnet (common part: vars/common.libsonnet)

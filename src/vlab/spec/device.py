@@ -14,6 +14,8 @@ from .port import Port
 
 logger = logging.getLogger(__name__)
 
+DEVICE_VNET_MTU = 9100  # MTU of device networks (p2p links, internal ones): jumbo frames between VMs
+
 
 @dataclass(kw_only=True)
 class Device(DataClassDictMixin):
@@ -58,7 +60,7 @@ class Device(DataClassDictMixin):
         res = {v.name: v for v in self.vnets()}
         for p in self.all_ports():
             if p.p2p is not None and p.p2p not in res:
-                res[p.p2p] = VNet(p.p2p, devices=[self.name])
+                res[p.p2p] = VNet(p.p2p, devices=[self.name], mtu=DEVICE_VNET_MTU)
         return list(res.values())
 
     def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:

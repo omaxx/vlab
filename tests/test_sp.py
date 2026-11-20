@@ -36,7 +36,7 @@ def test_links_and_ips(devices):
         assert set(d.vars["interfaces"]) == {"fxp0", "lo0", *names}  # jsonnet vars: keys come sorted, order not checked
         for port, ifc in zip(d.ports, (d.vars["interfaces"][n] for n in names)):
             ip = IPv4Interface(ifc["ip"])
-            assert int(ip.ip) & 0xFF == d.id  # .id on every link
+            assert int(ip.ip) & 0xFF == (9 if d.name in ("R10", "R20") else d.id)  # .id on every link, CE .9
             assert port.p2p is not None
             ends.setdefault(port.p2p, []).append((d.name, ip))
     assert len(ends) == 22
