@@ -131,7 +131,8 @@ class VM:
     memory: int = 4096  # MiB
     disks: list[Disk] = field(default_factory=list)
     interfaces: list[Interface] = field(default_factory=list)
-    uefi: bool = True  # BIOS boot loops on this host
+    uefi: bool = True  # BIOS boot loops on this host for Debian cloud images
+    machine: str = "q35"  # e.g. "pc" (i440fx) for images that need IDE/legacy chipset
 
     def networks(self) -> list[str]:
         """libvirt networks this VM is attached to (bridges and udp excluded)."""
@@ -148,7 +149,7 @@ class VM:
         ET.SubElement(dom, "vcpu").text = str(self.vcpus)
 
         os = ET.SubElement(dom, "os", firmware="efi") if self.uefi else ET.SubElement(dom, "os")
-        ET.SubElement(os, "type", arch="x86_64", machine="q35").text = "hvm"
+        ET.SubElement(os, "type", arch="x86_64", machine=self.machine).text = "hvm"
         ET.SubElement(os, "boot", dev="hd")
 
         features = ET.SubElement(dom, "features")
@@ -178,6 +179,7 @@ class VM:
         memory = dom.find("memory")
         device = dom.find(f"metadata/{tag('domain')}/{tag('device')}")
         os = dom.find("os")
+        os_type = dom.find("os/type")
         return cls(
             name=dom.findtext("name", ""),
             device=device.text if device is not None else None,
@@ -186,4 +188,14 @@ class VM:
             disks=[Disk.from_xml(e) for e in dom.iterfind("devices/disk")],
             interfaces=[Interface.from_xml(e) for e in dom.iterfind("devices/interface")],
             uefi=os is not None and os.get("firmware") == "efi",
+            machine=_machine_alias(os_type.get("machine", "q35") if os_type is not None else "q35"),
         )
+
+
+def _machine_alias(machine: str) -> str:
+    """libvirt expands aliases on define (q35 -> pc-q35-10.0, pc -> pc-i440fx-10.0): map back."""
+    if machine.startswith("pc-q35-"):
+        return "q35"
+    if machine.startswith("pc-i440fx-"):
+        return "pc"
+    return machine

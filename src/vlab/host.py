@@ -71,13 +71,17 @@ class Host:
     def cp(self, src: str, dst: str) -> None:
         self.run("cp", self.expand(src), self.expand(dst))
 
-    def cow(self, base: str, dst: str) -> None:
-        """Create qcow2 overlay dst backed by base (base must stay unchanged)."""
-        self.run("qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", self.expand(base), self.expand(dst))
+    def cow(self, base: str, dst: str, backing_format: str = "qcow2") -> None:
+        """Create qcow2 overlay dst backed by base (qcow2 or raw; base must stay unchanged)."""
+        self.run("qemu-img", "create", "-f", "qcow2", "-F", backing_format, "-b", self.expand(base), self.expand(dst))
 
     def resize(self, path: str, size: str) -> None:
         """Grow disk image, size e.g. "20G"."""
         self.run("qemu-img", "resize", self.expand(path), size)
+
+    def mktemp_dir(self) -> str:
+        """New empty temporary directory on host; caller removes it."""
+        return self.run("mktemp", "-d").strip()
 
     def read(self, path: str) -> str:
         return self.run("cat", self.expand(path))

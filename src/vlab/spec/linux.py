@@ -1,41 +1,14 @@
 from dataclasses import dataclass, field
 import json
 import logging
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from ..host import Host
-from ..virt import VM, DHCPHost, Disk, Interface
-from ..virt.vm import NicModel, NicType
+from ..virt import VM, DHCPHost, Disk
 from .device import Device
+from .port import Port
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Port:
-    """NIC: exactly one of network (libvirt network), bridge (host bridge), udp (remote "addr:port" + local)."""
-
-    network: str | None = None
-    ip: str | None = None  # with prefix, e.g. "172.255.1.1/24"
-    gateway: str | None = None
-    dns: list[str] = field(default_factory=list)
-    bridge: str | None = None
-    udp: str | None = None  # remote "addr:port"
-    local: str | None = None  # own "addr:port" for udp
-    target: str | None = None  # host-side interface name (network/bridge); default "<device>-<N>" if <= 15 chars
-    model: NicModel = "virtio"
-    dhcp: bool = False  # register fixed DHCP lease (ip, device name for DNS) in network on deploy
-
-    def interface(self, mac: str, default_target: str) -> Interface:
-        sources = {"network": self.network, "bridge": self.bridge, "udp": self.udp}
-        given = [(t, s) for t, s in sources.items() if s is not None]
-        if len(given) != 1:
-            raise ValueError("Port needs exactly one of network, bridge or udp")
-        type_, source = given[0]
-        target = self.target
-        if target is None and type_ != "udp" and len(default_target) <= 15:  # Linux ifname limit
-            target = default_target
-        return Interface(cast(NicType, type_), source, target=target, local=self.local, mac=mac, model=self.model)
 
 
 @dataclass(kw_only=True)
