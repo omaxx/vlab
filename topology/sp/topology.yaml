@@ -13,7 +13,7 @@ x-vmx: &vmx               # common part of all routers (x-* keys are ignored by 
     network: mgmt-1
 
 x-vars: &vars            # vars common to all routers
-  root_pass: "$6$vlabvlab$5dQUFdNoOCf9So8AVoZ6h0YNmeTTcxbnITrhfaOBSO99pynAJEjKpJ28VT/7YgsVTfAbezIj2GwQjEF.gAD3m."  # lab only: "vlab123"
+  root_pass: "$6$JhkcroEHcPSaKy69$4a1Yh9qDiogdCpHhTUr4onYbXWaEFBVco09XQwnqyhldN0HEEVv3tArAdMaETiidyS5aS1Ud.Yv2I7akBRNZK1"  # lab only: "Juniper#123"
   user_name: jnpr
   user_pass: "$6$FJxmFnSBuGoQmmD1$FtEb83qJ8ykiLYt4Lm0NFGQI806taetWYJLS.wtp/rz4quO221hzMZJOl8pFix0JStXa4FE8auqqZIoUAmL2i0"  # lab only: "Juniper#123"
   user_key: |             # ~/.ssh/authorized_keys
