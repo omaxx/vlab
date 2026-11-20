@@ -68,7 +68,7 @@ devices:
   vmx-1:
     type: jnpr/vmx        # Juniper vMX (RE + FPC VMs); also jnpr/vqfx
     config: vmx.conf.j2   # Jinja2 template in configs/, rendered with vars
-    vars: {...}
+    vars: {...}           # or a file: vars/vmx-1.jsonnet (also .yaml/.json; topology/sp/vars/)
     ports:
       - p2p: srv-1        # same p2p name on two devices = link between them
 networks: {}              # regular networks (like networks/mgmt.yaml)

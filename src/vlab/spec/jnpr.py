@@ -6,6 +6,7 @@ from typing import Any, ClassVar
 import jinja2
 
 from ..host import Host
+from ..utils import load_file
 from ..virt import VM, DHCPHost, Disk, Interface, SysInfo, VNet
 from .device import Device
 from .port import Port
@@ -104,6 +105,7 @@ class VMX(Junos):
     RE SMBIOS as in Juniper's vRE template (product VM-<name>-161-re-<slot>).
     config: Jinja2 template of juniper.conf (name in <spec dir>/configs/ or absolute path), rendered with
     `vars` (+ `device` = this spec) by resolve(); result put into the RE metadata image, loaded at first boot.
+    vars: map, or file (.yaml/.json/.jsonnet, relative to spec dir or absolute) loaded by resolve().
     """
 
     type: ClassVar[str] = "jnpr/vmx"
@@ -113,7 +115,7 @@ class VMX(Junos):
     fpc_vcpus: int = 3
     double_re: bool = False
     config: str | None = None  # juniper.conf Jinja2 template
-    vars: dict[str, Any] = field(default_factory=dict)  # template variables
+    vars: dict[str, Any] | str = field(default_factory=dict)  # template variables, or file with them
     rendered_config: str | None = field(default=None, init=False, repr=False, compare=False)
 
     @property
@@ -173,6 +175,9 @@ class VMX(Junos):
         return res
 
     def resolve(self, spec_dir: str) -> None:
+        if isinstance(self.vars, str):
+            path = Path(self.vars) if Path(self.vars).is_absolute() else Path(spec_dir) / self.vars
+            self.vars = {str(k): v for k, v in load_file(str(path)).items()}
         if self.config is not None:
             self.rendered_config = render_template(self.config, spec_dir, device=self, **self.vars)
 

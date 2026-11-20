@@ -1,8 +1,8 @@
 # SP lab from topology/topology.drawio (diagram "sp"): 10 Juniper vMX
 # P: R1-R4, PE: R5-R8, CE: R10, R20; id = router number, link ip .<id>, loopbacks from the drawing
 # links are p2p: networks R<a>_R<b>, subnet 10.0.<a><b>.0/24 (R10/R20 count as 9)
-# all devices also on mgmt-1 (networks/mgmt.yaml); fxp0 static ip vars.mgmt_ip 172.255.1.<id>, no dhcp
-# config template configs/vmx.conf.j2
+# all devices also on mgmt-1 (networks/mgmt.yaml); fxp0 static ip 172.255.1.<id> (vars interfaces.fxp0), no dhcp
+# config template configs/vmx.conf.j2, its vars in vars/<device>.jsonnet (common part: vars/common.libsonnet)
 
 x-vmx: &vmx               # common part of all routers (x-* keys are ignored by vlab)
   type: jnpr/vmx
@@ -11,14 +11,6 @@ x-vmx: &vmx               # common part of all routers (x-* keys are ignored by 
   fpc_image: vFPC-20241118.img
   mgmt:
     network: mgmt-1
-
-x-vars: &vars            # vars common to all routers
-  root_pass: "$6$JhkcroEHcPSaKy69$4a1Yh9qDiogdCpHhTUr4onYbXWaEFBVco09XQwnqyhldN0HEEVv3tArAdMaETiidyS5aS1Ud.Yv2I7akBRNZK1"  # lab only: "Juniper#123"
-  user_name: maxim
-  user_pass: "$6$FJxmFnSBuGoQmmD1$FtEb83qJ8ykiLYt4Lm0NFGQI806taetWYJLS.wtp/rz4quO221hzMZJOl8pFix0JStXa4FE8auqqZIoUAmL2i0"  # lab only: "Juniper#123"
-  user_key: |             # ~/.ssh/authorized_keys
-    ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBM9Rs513ppdGvZsALPGJfkz2avWyuhr3DcOl4vGD5mgZVNO1eiKINqom9KrITTAZfU9oWiNvF9JbJ0k0CZq6qBk= omaxx@80a9971740eb
-    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVflN8friZ1wjC2eEetBfyprfmrOfUhmMNhBiJxEZhUOKXzeK9jTNlDJR+FLqqMpjS+vp5pSL4A2mV1EDyQvDYLRKnQv4+gFJf+qY+2pMg5AiX2xQflJNJgCUrFnfRQVc9kdrcQU8Ov5VB86b9bm+ulBCyQCQI6XUSGDJ6WZFv9Qs+y8gTUkg7d3me/VQ3QVmrMkCTfC4ooNVHo2cemezWAduLLPOpBtlRiPvkwaChy+iN4462PguxNAL/pYQzAw20lwJfGfBWbbEtbNjD8jc4aUwC/VRKkVanuThxJVsplVZnUSziLfY/IHEzG84hisubVyrH1whkZUOaER/vh18Z maxx.orlov@gmail.com
 
 devices:
   R1:
@@ -31,27 +23,7 @@ devices:
       - p2p: R1_R6
       - p2p: R1_R2
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.1/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.1/32
-        ge-0/0/0:
-          description: "-> R3 : ge-0/0/0"
-          ip: 10.0.13.1/24
-        ge-0/0/1:
-          description: "-> R4 : ge-0/0/1"
-          ip: 10.0.14.1/24
-        ge-0/0/2:
-          description: "-> R5 : ge-0/0/0"
-          ip: 10.0.15.1/24
-        ge-0/0/3:
-          description: "-> R6 : ge-0/0/1"
-          ip: 10.0.16.1/24
-        ge-0/0/4:
-          description: "-> R2 : ge-0/0/4"
-          ip: 10.0.12.1/24
+    vars: vars/R1.jsonnet
 
   R2:
     <<: *vmx
@@ -63,27 +35,7 @@ devices:
       - p2p: R2_R5
       - p2p: R1_R2
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.2/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.2/32
-        ge-0/0/0:
-          description: "-> R4 : ge-0/0/0"
-          ip: 10.0.24.2/24
-        ge-0/0/1:
-          description: "-> R3 : ge-0/0/1"
-          ip: 10.0.23.2/24
-        ge-0/0/2:
-          description: "-> R6 : ge-0/0/0"
-          ip: 10.0.26.2/24
-        ge-0/0/3:
-          description: "-> R5 : ge-0/0/1"
-          ip: 10.0.25.2/24
-        ge-0/0/4:
-          description: "-> R1 : ge-0/0/4"
-          ip: 10.0.12.2/24
+    vars: vars/R2.jsonnet
 
   R3:
     <<: *vmx
@@ -95,27 +47,7 @@ devices:
       - p2p: R3_R8
       - p2p: R3_R4
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.3/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.3/32
-        ge-0/0/0:
-          description: "-> R1 : ge-0/0/0"
-          ip: 10.0.13.3/24
-        ge-0/0/1:
-          description: "-> R2 : ge-0/0/1"
-          ip: 10.0.23.3/24
-        ge-0/0/2:
-          description: "-> R7 : ge-0/0/0"
-          ip: 10.0.37.3/24
-        ge-0/0/3:
-          description: "-> R8 : ge-0/0/1"
-          ip: 10.0.38.3/24
-        ge-0/0/4:
-          description: "-> R4 : ge-0/0/4"
-          ip: 10.0.34.3/24
+    vars: vars/R3.jsonnet
 
   R4:
     <<: *vmx
@@ -127,27 +59,7 @@ devices:
       - p2p: R4_R7
       - p2p: R3_R4
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.4/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.4/32
-        ge-0/0/0:
-          description: "-> R2 : ge-0/0/0"
-          ip: 10.0.24.4/24
-        ge-0/0/1:
-          description: "-> R1 : ge-0/0/1"
-          ip: 10.0.14.4/24
-        ge-0/0/2:
-          description: "-> R8 : ge-0/0/0"
-          ip: 10.0.48.4/24
-        ge-0/0/3:
-          description: "-> R7 : ge-0/0/1"
-          ip: 10.0.47.4/24
-        ge-0/0/4:
-          description: "-> R3 : ge-0/0/4"
-          ip: 10.0.34.4/24
+    vars: vars/R4.jsonnet
 
   R5:
     <<: *vmx
@@ -159,27 +71,7 @@ devices:
       - p2p: R5_R10
       - p2p: R5_R7
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.5/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.5/32
-        ge-0/0/0:
-          description: "-> R1 : ge-0/0/2"
-          ip: 10.0.15.5/24
-        ge-0/0/1:
-          description: "-> R2 : ge-0/0/3"
-          ip: 10.0.25.5/24
-        ge-0/0/2:
-          description: "-> R6 : ge-0/0/2"
-          ip: 10.0.56.5/24
-        ge-0/0/3:
-          description: "-> R10 : ge-0/0/0"
-          ip: 10.0.59.5/24
-        ge-0/0/4:
-          description: "-> R7 : ge-0/0/4"
-          ip: 10.0.57.5/24
+    vars: vars/R5.jsonnet
 
   R6:
     <<: *vmx
@@ -191,27 +83,7 @@ devices:
       - p2p: R6_R10
       - p2p: R6_R8
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.6/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.6/32
-        ge-0/0/0:
-          description: "-> R2 : ge-0/0/2"
-          ip: 10.0.26.6/24
-        ge-0/0/1:
-          description: "-> R1 : ge-0/0/3"
-          ip: 10.0.16.6/24
-        ge-0/0/2:
-          description: "-> R5 : ge-0/0/2"
-          ip: 10.0.56.6/24
-        ge-0/0/3:
-          description: "-> R10 : ge-0/0/1"
-          ip: 10.0.69.6/24
-        ge-0/0/4:
-          description: "-> R8 : ge-0/0/4"
-          ip: 10.0.68.6/24
+    vars: vars/R6.jsonnet
 
   R7:
     <<: *vmx
@@ -223,27 +95,7 @@ devices:
       - p2p: R7_R20
       - p2p: R5_R7
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.7/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.7/32
-        ge-0/0/0:
-          description: "-> R3 : ge-0/0/2"
-          ip: 10.0.37.7/24
-        ge-0/0/1:
-          description: "-> R4 : ge-0/0/3"
-          ip: 10.0.47.7/24
-        ge-0/0/2:
-          description: "-> R8 : ge-0/0/2"
-          ip: 10.0.78.7/24
-        ge-0/0/3:
-          description: "-> R20 : ge-0/0/0"
-          ip: 10.0.79.7/24
-        ge-0/0/4:
-          description: "-> R5 : ge-0/0/4"
-          ip: 10.0.57.7/24
+    vars: vars/R7.jsonnet
 
   R8:
     <<: *vmx
@@ -255,27 +107,7 @@ devices:
       - p2p: R8_R20
       - p2p: R6_R8
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.8/24
-      interfaces:
-        lo0:
-          ip: 10.0.0.8/32
-        ge-0/0/0:
-          description: "-> R4 : ge-0/0/2"
-          ip: 10.0.48.8/24
-        ge-0/0/1:
-          description: "-> R3 : ge-0/0/3"
-          ip: 10.0.38.8/24
-        ge-0/0/2:
-          description: "-> R7 : ge-0/0/2"
-          ip: 10.0.78.8/24
-        ge-0/0/3:
-          description: "-> R20 : ge-0/0/1"
-          ip: 10.0.89.8/24
-        ge-0/0/4:
-          description: "-> R6 : ge-0/0/4"
-          ip: 10.0.68.8/24
+    vars: vars/R8.jsonnet
 
   R10:
     <<: *vmx
@@ -284,18 +116,7 @@ devices:
       - p2p: R5_R10
       - p2p: R6_R10
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.10/24
-      interfaces:
-        lo0:
-          ip: 10.10.0.1/32
-        ge-0/0/0:
-          description: "-> R5 : ge-0/0/3"
-          ip: 10.0.59.10/24
-        ge-0/0/1:
-          description: "-> R6 : ge-0/0/3"
-          ip: 10.0.69.10/24
+    vars: vars/R10.jsonnet
 
   R20:
     <<: *vmx
@@ -304,17 +125,6 @@ devices:
       - p2p: R7_R20
       - p2p: R8_R20
     config: vmx.conf.j2
-    vars:
-      <<: *vars
-      mgmt_ip: 172.255.1.20/24
-      interfaces:
-        lo0:
-          ip: 10.20.0.1/32
-        ge-0/0/0:
-          description: "-> R7 : ge-0/0/3"
-          ip: 10.0.79.20/24
-        ge-0/0/1:
-          description: "-> R8 : ge-0/0/3"
-          ip: 10.0.89.20/24
+    vars: vars/R20.jsonnet
 
 networks: {}  # mgmt-1 is in networks/mgmt.yaml; links come from p2p ports

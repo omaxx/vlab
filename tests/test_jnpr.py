@@ -127,6 +127,31 @@ def test_render_template(tmp_path):
     assert d.rendered_config == "abs"
 
 
+def test_vars_from_file(tmp_path):
+    (tmp_path / "configs").mkdir()
+    (tmp_path / "configs/t.j2").write_text("{{ user }} {{ ip }}")
+    (tmp_path / "vars").mkdir()
+    (tmp_path / "vars/common.libsonnet").write_text("{ user: 'maxim' }")
+    (tmp_path / "vars/vmx-1.jsonnet").write_text("(import 'common.libsonnet') + { ip: '10.0.0.1/32' }")
+    d = make(config="t.j2", vars="vars/vmx-1.jsonnet")  # relative to spec dir, imports relative to the vars file
+    d.resolve(str(tmp_path))
+    assert d.vars == {"user": "maxim", "ip": "10.0.0.1/32"}
+    assert d.rendered_config == "maxim 10.0.0.1/32"
+    (tmp_path / "abs.yaml").write_text("user: root\nip: 10.0.0.2/32\n")
+    d = make(config="t.j2", vars=str(tmp_path / "abs.yaml"))  # absolute path, any spec format
+    d.resolve(str(tmp_path))
+    assert d.rendered_config == "root 10.0.0.2/32"
+
+
+def test_vars_file_from_dict_spec(tmp_path):
+    (tmp_path / "v.json").write_text('{"x": 1}')
+    d = Device.from_dict({"type": "jnpr/vmx", "name": "vmx-1", "id": 1, "version": "v", "re_image": "re.qcow2",
+                          "fpc_image": "fpc.img", "vars": "v.json"})
+    assert d.vars == "v.json"  # spec keeps the path until resolve()
+    d.resolve(str(tmp_path))
+    assert d.vars == {"x": 1}
+
+
 def test_render_undefined_var_fails(tmp_path):
     import jinja2
     (tmp_path / "configs").mkdir()

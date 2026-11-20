@@ -29,23 +29,24 @@ chassis {
         lite-mode;
     }
 }
+{#- interface families: ip -> inet, ipv6 -> inet6, iso -> iso, mpls -> mpls; value address or true (family only) #}
 interfaces {
-    fxp0 {
-        unit 0 {
-            family inet {
-                address {{ mgmt_ip }};
-            }
-        }
-    }
 {%- for name, ifc in interfaces.items() %}
     {{ name }} {
 {%- if ifc.description is defined %}
         description "{{ ifc.description }}";
 {%- endif %}
         unit 0 {
-            family inet {
-                address {{ ifc.ip }};
+{%- for key, family in [("ip", "inet"), ("ipv6", "inet6"), ("iso", "iso"), ("mpls", "mpls")] %}
+{%- set value = ifc[key] | default(false) %}
+{%- if value is string %}
+            family {{ family }} {
+                address {{ value }};
             }
+{%- elif value is sameas true %}
+            family {{ family }};
+{%- endif %}
+{%- endfor %}
         }
     }
 {%- endfor %}
@@ -59,3 +60,19 @@ routing-options {
     }
 }
 {%- endif %}
+protocols {
+    lldp {
+        interface all;
+        interface fxp0 {
+            disable;
+        }
+    }
+{%- set mpls_ifs = interfaces.items() | selectattr("1.mpls", "sameas", true) | map(attribute="0") | list %}
+{%- if mpls_ifs %}
+    mpls {
+{%- for name in mpls_ifs %}
+        interface {{ name }};
+{%- endfor %}
+    }
+{%- endif %}
+}

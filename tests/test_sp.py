@@ -22,7 +22,7 @@ def test_routers(devices):
         assert isinstance(d, VMX)
         assert d.id == int(name[1:])  # id = router number
         assert (d.mgmt.network, d.mgmt.ip, d.mgmt.dhcp) == ("mgmt-1", None, False)  # whole mgmt port from the anchor
-        assert d.vars["mgmt_ip"] == f"172.255.1.{d.id}/24"  # fxp0 static, set by the config
+        assert d.vars["interfaces"]["fxp0"]["ip"] == f"172.255.1.{d.id}/24"  # fxp0 static, set by the config
         assert (d.version, d.re_image, d.fpc_image) == (
             "24.4R1-S2.9", "junos-vmx-x86-64-24.4R1-S2.9.qcow2", "vFPC-20241118.img",
         )
@@ -32,9 +32,9 @@ def test_routers(devices):
 def test_links_and_ips(devices):
     ends: dict[str, list[tuple[str, IPv4Interface]]] = {}
     for d in devices.values():
-        ifaces = {k: v for k, v in d.vars["interfaces"].items() if k != "lo0"}
-        assert list(d.vars["interfaces"]) == ["lo0", *(f"ge-0/0/{i}" for i in range(len(d.ports)))]  # port N = ge-0/0/N
-        for port, ifc in zip(d.ports, ifaces.values()):
+        names = [f"ge-0/0/{i}" for i in range(len(d.ports))]  # port N = ge-0/0/N
+        assert set(d.vars["interfaces"]) == {"fxp0", "lo0", *names}  # jsonnet vars: keys come sorted, order not checked
+        for port, ifc in zip(d.ports, (d.vars["interfaces"][n] for n in names)):
             ip = IPv4Interface(ifc["ip"])
             assert int(ip.ip) & 0xFF == d.id  # .id on every link
             assert port.p2p is not None
@@ -90,3 +90,90 @@ def test_users(devices):
         for key in keys:
             kind = {"ssh-rsa": "ssh-rsa", "ssh-ed25519": "ssh-ed25519"}.get(key.split()[0], "ssh-ecdsa")
             assert f'{kind} "{key}";' in cfg
+
+
+def test_interface_families(devices):
+    """ip/ipv6/iso/mpls -> family inet/inet6/iso/mpls: address -> `family X { address A; }`, true -> `family X;`."""
+    from vlab.spec.jnpr import render_template
+    d = devices["R1"]
+    interfaces = {
+        "ge-0/0/0": {"ip": "10.0.13.1/24", "ipv6": "2001:db8::1/64", "iso": True, "mpls": True},
+        "ge-0/0/1": {"ip": True, "ipv6": False},  # false = no family
+        "lo0": {"ip": "10.0.0.1/32", "iso": "49.0001.0100.0000.0001.00"},
+    }
+    cfg = render_template("vmx.conf.j2", str(TOPOLOGY / "sp"), device=d, **{**d.vars, "interfaces": interfaces})
+    assert """    ge-0/0/0 {
+        unit 0 {
+            family inet {
+                address 10.0.13.1/24;
+            }
+            family inet6 {
+                address 2001:db8::1/64;
+            }
+            family iso;
+            family mpls;
+        }
+    }
+    ge-0/0/1 {
+        unit 0 {
+            family inet;
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.0.0.1/32;
+            }
+            family iso {
+                address 49.0001.0100.0000.0001.00;
+            }
+        }
+    }
+""" in cfg
+    assert "dhcp" not in cfg
+
+
+AREAS = {"R1": "49.0001", "R2": "49.0001", "R5": "49.0001", "R6": "49.0001",
+         "R3": "49.0002", "R4": "49.0002", "R7": "49.0002", "R8": "49.0002"}  # R10/R20 (CE): no ISO
+
+
+def test_iso(devices):
+    """lo0 NET = area + loopback ip padded to 12 digits; lo0 ipv6 fd00::<id>/128;
+    family inet6 (no address) + iso + mpls on links whose both ends are in AREAS."""
+    for n, d in devices.items():
+        ifs = d.vars["interfaces"]
+        if n in AREAS:
+            digits = "".join(f"{int(o):03d}" for o in ifs["lo0"]["ip"].split("/")[0].split("."))
+            assert ifs["lo0"]["iso"] == f"{AREAS[n]}.{digits[:4]}.{digits[4:8]}.{digits[8:]}.00"
+            assert f"family iso {{\n                address {ifs['lo0']['iso']};" in d.rendered_config
+            assert ifs["lo0"]["ipv6"] == f"fd00::{d.id}/128"
+        else:
+            assert "iso" not in ifs["lo0"] and "ipv6" not in ifs["lo0"]
+        for name, ifc in ifs.items():
+            if name.startswith("ge-"):
+                peer = ifc["description"].split()[1]
+                core = n in AREAS and peer in AREAS
+                assert ifc.get("iso", False) is core, (n, name)
+                assert ifc.get("mpls", False) is core, (n, name)
+                assert ifc.get("ipv6", False) is core, (n, name)
+
+
+def test_lldp(devices):
+    """LLDP on all interfaces except fxp0 (mgmt)."""
+    lldp = "protocols {\n    lldp {\n        interface all;\n        interface fxp0 {\n            disable;\n        }\n    }\n"
+    for d in devices.values():
+        assert d.rendered_config is not None and lldp in d.rendered_config, d.name
+
+
+def test_protocols_mpls(devices):
+    """protocols mpls: an interface line for each interface with mpls: true; no mpls section without any."""
+    for d in devices.values():
+        names = [n for n, ifc in d.vars["interfaces"].items() if ifc.get("mpls") is True]
+        cfg = d.rendered_config
+        assert cfg is not None
+        if names:
+            lines = "".join(f"        interface {n};\n" for n in names)
+            assert f"    mpls {{\n{lines}    }}\n}}\n" in cfg, d.name
+        else:
+            assert "    mpls {" not in cfg, d.name
+    assert len([n for n, i in devices["R1"].vars["interfaces"].items() if i.get("mpls")]) == 5
