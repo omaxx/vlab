@@ -151,3 +151,34 @@ def test_from_xml_libvirt_running_domain():
     vm = VM.from_xml(xml)
     assert (vm.memory, vm.uefi, vm.disks, vm.device) == (4096, True, [], None)
     assert vm.interfaces == [Interface("network", "mgmt-1", target="vnet3", mac="c0:ff:ee:01:00:01")]
+
+
+def test_sysinfo(validate_xml, tmp_path):
+    from vlab.virt import SysInfo
+    info = SysInfo({"vendor": "Juniper"}, {"manufacturer": "VMX", "product": "VM-vmx-1-161-re-0", "version": "0.1.0"})
+    xml = VM("vm-01", uefi=False, sysinfo=info).to_xml(Host())
+    dom = ET.fromstring(xml)
+    assert dom.find("os/smbios").get("mode") == "sysinfo"
+    assert {e.get("name"): e.text for e in dom.iterfind("sysinfo/system/entry")}["product"] == "VM-vmx-1-161-re-0"
+    validate_xml(xml, "domain", tmp_path)
+    assert VM.from_xml(xml).sysinfo == info
+    assert ET.fromstring(VM("vm-01").to_xml(Host())).find("sysinfo") is None
+
+
+def test_on_crash():
+    assert ET.fromstring(VM("vm-01").to_xml(Host())).findtext("on_crash") == "restart"
+    assert VM.from_xml(VM("vm-01", on_crash="destroy").to_xml(Host())).on_crash == "destroy"
+
+
+def test_telnet_console(validate_xml, tmp_path):
+    xml = VM("vm-01", telnet_port=6011).to_xml(Host())
+    dom = ET.fromstring(xml)
+    for kind in ("serial", "console"):
+        el = dom.find(f"devices/{kind}")
+        assert el.get("type") == "tcp"
+        assert el.find("source").attrib == {"mode": "bind", "host": "127.0.0.1", "service": "6011"}  # localhost only
+        assert el.find("protocol").get("type") == "telnet"
+    validate_xml(xml, "domain", tmp_path)
+    assert VM.from_xml(xml).telnet_port == 6011
+    pty = ET.fromstring(VM("vm-01").to_xml(Host())).find("devices/serial")
+    assert pty.get("type") == "pty" and pty.find("source") is None

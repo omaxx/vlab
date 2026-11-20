@@ -118,10 +118,35 @@ class Interface:
 
 
 @dataclass
+class SysInfo:
+    """SMBIOS strings seen by the guest (dmidecode): <sysinfo type='smbios'> + <os><smbios mode='sysinfo'/>."""
+
+    bios: dict[str, str] = field(default_factory=dict)  # e.g. {"vendor": "Juniper"}
+    system: dict[str, str] = field(default_factory=dict)  # manufacturer, product, version, serial, uuid, sku, family
+
+    def to_xml(self) -> ET.Element:
+        info = ET.Element("sysinfo", type="smbios")
+        for section, entries in (("bios", self.bios), ("system", self.system)):
+            if entries:
+                sec = ET.SubElement(info, section)
+                for k, v in entries.items():
+                    ET.SubElement(sec, "entry", name=k).text = v
+        return info
+
+    @classmethod
+    def from_xml(cls, xml: ET.Element) -> Self:
+        def entries(section: str) -> dict[str, str]:
+            return {e.get("name", ""): e.text or "" for e in xml.iterfind(f"{section}/entry")}
+        return cls(bios=entries("bios"), system=entries("system"))
+
+
+@dataclass
 class VM:
     """libvirt domain: UEFI q35 VM with disks, NICs, serial console and QEMU guest agent channel.
 
     Relative disk files live in host.vm_dir(name).
+    Serial console: pty (virsh console), or with telnet_port a telnet server on 127.0.0.1:<port> only
+    (then virsh console is not available).
     Controllers, PCI addresses, loader and NVRAM paths are filled in by libvirt on define.
     """
 
@@ -133,6 +158,9 @@ class VM:
     interfaces: list[Interface] = field(default_factory=list)
     uefi: bool = True  # BIOS boot loops on this host for Debian cloud images
     machine: str = "q35"  # e.g. "pc" (i440fx) for images that need IDE/legacy chipset
+    sysinfo: SysInfo | None = None
+    on_crash: Literal["destroy", "restart", "preserve"] = "restart"
+    telnet_port: int | None = None
 
     def networks(self) -> list[str]:
         """libvirt networks this VM is attached to (bridges and udp excluded)."""
@@ -147,24 +175,34 @@ class VM:
             ET.SubElement(meta, tag("device")).text = self.device
         ET.SubElement(dom, "memory", unit="MiB").text = str(self.memory)
         ET.SubElement(dom, "vcpu").text = str(self.vcpus)
+        if self.sysinfo is not None:
+            dom.append(self.sysinfo.to_xml())
 
         os = ET.SubElement(dom, "os", firmware="efi") if self.uefi else ET.SubElement(dom, "os")
         ET.SubElement(os, "type", arch="x86_64", machine=self.machine).text = "hvm"
         ET.SubElement(os, "boot", dev="hd")
+        if self.sysinfo is not None:
+            ET.SubElement(os, "smbios", mode="sysinfo")
 
         features = ET.SubElement(dom, "features")
         ET.SubElement(features, "acpi")
         ET.SubElement(features, "apic")
         ET.SubElement(dom, "cpu", mode="host-passthrough")
+        ET.SubElement(dom, "on_crash").text = self.on_crash
 
         devices = ET.SubElement(dom, "devices")
         devices.extend(d.to_xml(vm_dir) for d in self.disks)
         devices.extend(i.to_xml() for i in self.interfaces)
 
-        serial = ET.SubElement(devices, "serial", type="pty")
-        ET.SubElement(serial, "target", port="0")
-        console = ET.SubElement(devices, "console", type="pty")
-        ET.SubElement(console, "target", type="serial", port="0")
+        for kind in ("serial", "console"):
+            chardev = ET.SubElement(devices, kind, type="pty" if self.telnet_port is None else "tcp")
+            if self.telnet_port is not None:  # libvirt: console = same chardev as serial port 0
+                ET.SubElement(chardev, "source", mode="bind", host="127.0.0.1", service=str(self.telnet_port))
+                ET.SubElement(chardev, "protocol", type="telnet")
+            if kind == "serial":
+                ET.SubElement(chardev, "target", port="0")
+            else:
+                ET.SubElement(chardev, "target", type="serial", port="0")
         channel = ET.SubElement(devices, "channel", type="unix")
         ET.SubElement(channel, "target", type="virtio", name=AGENT_CHANNEL)
         rng = ET.SubElement(devices, "rng", model="virtio")
@@ -180,6 +218,9 @@ class VM:
         device = dom.find(f"metadata/{tag('domain')}/{tag('device')}")
         os = dom.find("os")
         os_type = dom.find("os/type")
+        sysinfo = dom.find("sysinfo[@type='smbios']")
+        serial = dom.find("devices/serial")
+        source = serial.find("source") if serial is not None and serial.get("type") == "tcp" else None
         return cls(
             name=dom.findtext("name", ""),
             device=device.text if device is not None else None,
@@ -189,6 +230,9 @@ class VM:
             interfaces=[Interface.from_xml(e) for e in dom.iterfind("devices/interface")],
             uefi=os is not None and os.get("firmware") == "efi",
             machine=_machine_alias(os_type.get("machine", "q35") if os_type is not None else "q35"),
+            sysinfo=SysInfo.from_xml(sysinfo) if sysinfo is not None else None,
+            on_crash=dom.findtext("on_crash", "destroy"),  # type: ignore[arg-type]
+            telnet_port=int(source.get("service", "0")) if source is not None else None,
         )
 
 

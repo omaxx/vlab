@@ -106,11 +106,12 @@ def list_() -> None:
 @list_.command("vms")
 @click.pass_obj
 def list_vms(host: Host) -> None:
-    table = Table("name", "device", "interfaces", "disks")
+    table = Table("name", "device", "console", "interfaces", "disks")
     for vm, active in virt.list_vms(host):
         ifaces = ", ".join(f"{i.type}({i.source})" for i in vm.interfaces)
         disks = "\n".join(d.file for d in vm.disks)
-        table.add_row(vm.name, vm.device or "", ifaces, disks, style="green" if active else "")
+        console = f"telnet 127.0.0.1 {vm.telnet_port}" if vm.telnet_port else "virsh console"
+        table.add_row(vm.name, vm.device or "", console, ifaces, disks, style="green" if active else "")
     Console().print(table)
 
 

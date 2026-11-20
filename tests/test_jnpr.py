@@ -197,3 +197,17 @@ def test_topology_vqfx():
     assert (d.name, d.version, d.dhcp_leases()) == (
         "vqfx-1", "20.2", [("mgmt-1", DHCPHost("ca:ff:ee:04:10:00", "172.255.1.4", "vqfx-1"))]
     )
+
+
+def test_vmx_sysinfo_and_consoles():
+    re0, re1, fpc = make(double_re=True).vms()
+    assert re0.sysinfo is not None and re0.sysinfo.bios == {"vendor": "Juniper"}
+    assert re0.sysinfo.system == {"manufacturer": "VMX", "product": "VM-vmx-1-161-re-0", "version": "0.1.0"}
+    assert re1.sysinfo is not None and re1.sysinfo.system["product"] == "VM-vmx-1-161-re-1"
+    assert fpc.sysinfo is None
+    assert [vm.telnet_port for vm in (re0, re1, fpc)] == [6030, 6031, 6035]  # 6000 + id*10 + n
+    assert [vm.telnet_port for vm in make(telnet=False).vms()] == [None, None]
+
+
+def test_vqfx_consoles():
+    assert [vm.telnet_port for vm in make_vqfx().vms()] == [6040, 6045]

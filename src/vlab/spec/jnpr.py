@@ -3,7 +3,7 @@ import logging
 from typing import ClassVar
 
 from ..host import Host
-from ..virt import VM, DHCPHost, Disk, Interface, VNet
+from ..virt import VM, DHCPHost, Disk, Interface, SysInfo, VNet
 from .device import Device
 from .port import Port
 
@@ -23,13 +23,13 @@ class Junos(Device):
     internal VNets <name>~<suffix> owned by the device.
 
     Images in <host.images_dir>/junos/<model>/<version>/; per VM folder vms/<vm>/ with qcow2 overlays.
+    Console telnet ports (Device.telnet_port): RE<slot> n=slot, FPC n=5.
     MACs (id, slot 2 decimal digits): RE ca:ff:ee:<id>:<10+slot>:<nic>, FPC ca:ff:ee:<id>:<slot>:<nic>,
     data port i (0-based, Junos port 0/0/i) ca:ff:ee:<id>:00:<i> with host interface <name>-0-<i>.
     """
 
     model: ClassVar[str]  # image folder under junos/
     internal: ClassVar[tuple[str, ...]]  # internal VNet suffixes
-    id: int  # 1-99
     version: str  # image folder, e.g. "24.4R1-S2.9"
     re_image: str
     fpc_image: str
@@ -95,6 +95,7 @@ class VMX(Junos):
     internal VNets ~int, ~fab.
 
     RE NICs: fxp0 mgmt :00, int :01. FPC NICs: mgmt :0a, int :0b, fab :0c, then ge-0/0/i.
+    RE SMBIOS as in Juniper's vRE template (product VM-<name>-161-re-<slot>).
     config: juniper.conf text (or config_file on host) put into the RE metadata image, loaded at first boot.
     """
 
@@ -122,6 +123,11 @@ class VMX(Junos):
                 vcpus=self.re_vcpus,
                 memory=self.re_memory,
                 uefi=False,
+                telnet_port=self.telnet_port(slot),
+                sysinfo=SysInfo(
+                    bios={"vendor": "Juniper"},
+                    system={"manufacturer": "VMX", "product": f"VM-{self.name}-161-re-{slot}", "version": "0.1.0"},
+                ),
                 disks=[
                     Disk("junos.qcow2", "vda"),
                     Disk("vmxhdd.qcow2", "vdb"),
@@ -143,6 +149,7 @@ class VMX(Junos):
                 memory=self.fpc_memory,
                 uefi=False,
                 machine="pc",
+                telnet_port=self.telnet_port(5),
                 disks=[
                     Disk("fpc.qcow2", "hda", bus="ide"),
                     Disk("metadata-usb-fpc0.img", "sda", format="raw", bus="usb"),
@@ -203,6 +210,7 @@ class VQFX(Junos):
                 memory=self.re_memory,
                 uefi=False,
                 machine="pc",
+                telnet_port=self.telnet_port(0),
                 disks=[Disk("junos.qcow2", "hda", bus="ide")],
                 interfaces=[
                     self.mgmt_nic(re0, self.mac(10, 0x00)),
@@ -218,6 +226,7 @@ class VQFX(Junos):
                 memory=self.fpc_memory,
                 uefi=False,
                 machine="pc",
+                telnet_port=self.telnet_port(5),
                 disks=[Disk("pfe.qcow2", "hda", bus="ide")],
                 interfaces=[
                     self.mgmt_nic(fpc, self.mac(0, 0x0A)),

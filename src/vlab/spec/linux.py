@@ -22,7 +22,6 @@ class Linux(Device):
     """
 
     type: ClassVar[str] = "linux"
-    id: int  # 1-99
     user: str  # $VAR allowed, e.g. $USER: taken from host env at deploy
     ssh_keys: list[str] = field(default_factory=list)
     ssh_key_files: list[str] = field(default_factory=list)  # paths on host (~ allowed), one key per line
@@ -51,6 +50,7 @@ class Linux(Device):
                 device=self.name,
                 vcpus=self.vcpus,
                 memory=self.memory,
+                telnet_port=self.telnet_port(0),
                 disks=[
                     Disk(f"{self.name}.qcow2", "vda"),
                     Disk("seed.iso", "sda", format="raw", bus="sata", device="cdrom"),

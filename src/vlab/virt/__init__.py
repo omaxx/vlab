@@ -11,12 +11,13 @@ from .api import (
     stop_vms,
     stop_vnets,
 )
-from .vm import VM, Disk, Interface
+from .vm import VM, Disk, Interface, SysInfo
 from .vnet import DHCP, DHCPHost, DHCPRange, VNet
 
 __all__ = [
     "VM",
     "Disk",
+    "SysInfo",
     "Interface",
     "VNet",
     "DHCP",

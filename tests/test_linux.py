@@ -189,3 +189,8 @@ def test_images_dir_per_type():
 def test_kw_only():
     with pytest.raises(TypeError):
         Linux("r3", 3, "u")  # type: ignore[misc]
+
+
+def test_telnet_console_port():
+    assert make().vms()[0].telnet_port == 6030  # id 3
+    assert make(telnet=False).vms()[0].telnet_port is None

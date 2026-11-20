@@ -23,9 +23,15 @@ class Device(DataClassDictMixin):
 
     type: ClassVar[str]
     name: str
+    id: int  # 1-99, unique per lab: used for MACs and console ports
+    telnet: bool = True  # serial console as telnet on 127.0.0.1:<telnet_port(n)>; False = pty (virsh console)
 
     class Config(BaseConfig):
         discriminator = Discriminator(field="type", include_subtypes=True)
+
+    def telnet_port(self, n: int) -> int | None:
+        """Console port of the device's VM n (0-9): 6000 + id*10 + n, None if telnet is off."""
+        return 6000 + self.id * 10 + n if self.telnet else None
 
     def images_dir(self, host: Host) -> str:
         """Base images of this device type: <host.images_dir>/<type>."""

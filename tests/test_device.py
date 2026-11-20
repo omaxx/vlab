@@ -40,7 +40,7 @@ def names(items):
 
 
 def test_deploy(host):
-    TwoVms(name="r1").deploy(host)
+    TwoVms(name="r1", id=1).deploy(host)
     assert {"r1-a", "r1-b"} <= set(names(list_vms(host)))
     vnets = {v.name: v for v, _ in list_vnets(host)}
     assert vnets["r1-int"].devices == ["r1"]
@@ -50,12 +50,12 @@ def test_deploy(host):
 
 def test_deploy_keeps_existing_vnet(host):
     define_vnet(host, VNet("r1-int", devices=["r1"], ip="10.0.0.1/24"))
-    TwoVms(name="r1").deploy(host)
+    TwoVms(name="r1", id=1).deploy(host)
     assert {v.name: v for v, _ in list_vnets(host)}["r1-int"].ip == "10.0.0.1/24"
 
 
 def test_start_stop(host):
-    device = TwoVms(name="r1")
+    device = TwoVms(name="r1", id=1)
     device.deploy(host)
     device.start(host)
     assert all(active for vm, active in list_vms(host) if vm.device == "r1")
@@ -69,7 +69,7 @@ def test_start_stop(host):
 def test_delete(keep_files):
     host = FakeHost(uri="test:///default", existing={"/var/lib/vlab/vms/r1-a", "/var/lib/vlab/vms/r1-b"})
     conn = libvirt.open(host.libvirt_uri)
-    device = TwoVms(name="r1")
+    device = TwoVms(name="r1", id=1)
     device.deploy(host)
     host.calls.clear()
     device.delete(host, keep_files=keep_files)
@@ -82,7 +82,7 @@ def test_delete(keep_files):
 def test_delete_missing_folder_skipped():
     host = FakeHost(uri="test:///default")
     conn = libvirt.open(host.libvirt_uri)
-    TwoVms(name="r2").deploy(host)
+    TwoVms(name="r2", id=1).deploy(host)
     delete(host, "r2-a")
     assert not [c for c in host.commands() if c[0] == "rm"]
     conn.close()
@@ -99,7 +99,7 @@ def test_deploy_registers_dhcp_leases(host):
         def vnets(self):
             return [VNet(f"{self.name}-int", ip="10.7.0.254/24", devices=[self.name])]
 
-    WithLease(name="r7").deploy(host)
+    WithLease(name="r7", id=7).deploy(host)
     vnet = {v.name: v for v, _ in list_vnets(host)}["r7-int"]
     assert vnet.dhcp.hosts == [DHCPHost("c0:ff:ee:07:00:01", "10.7.0.1", "r7")]
 
