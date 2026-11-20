@@ -6,7 +6,7 @@ The driver drops its state when the last connection closes, so the fixture keeps
 import libvirt
 import pytest
 
-from vlab.host import Host
+from conftest import FakeHost
 from vlab.virt import (
     VM, VNet, Disk, Interface, define_vm, define_vnet, delete_vms, list_vms, list_vnets,
     start_vms, start_vnets, stop_vms, stop_vnets, DHCP, DHCPHost, remove_dhcp_host, set_dhcp_host,
@@ -15,7 +15,7 @@ from vlab.virt import (
 
 @pytest.fixture
 def host():
-    return Host(uri="test:///default")
+    return FakeHost(uri="test:///default")  # records host commands (sudo for group_fwd_mask) instead of running them
 
 
 @pytest.fixture
@@ -94,6 +94,28 @@ def test_start_vms_starts_managed_vnets(host, lab):
     start_vms(host, "r1")
     assert lab.lookupByName("r1").isActive()
     assert {"lab-1", "link-12", "infra"} <= active_nets(lab)
+
+
+def fwd_mask_cmd(bridge: str) -> tuple[str, ...]:
+    return ("sudo", "sh", "-c", f"echo 0xfff8 >/sys/class/net/{bridge}/bridge/group_fwd_mask")
+
+
+def test_started_vnets_get_fwd_mask(host, lab):
+    start_vms(host, "r1")
+    cmds = host.commands()
+    assert fwd_mask_cmd("lab-1") in cmds
+    assert fwd_mask_cmd("link-12") in cmds
+    assert fwd_mask_cmd("infra") not in cmds  # unmanaged: not started by vlab
+    host.calls.clear()
+    start_vms(host, "r2")  # link-12 already active: not started again
+    assert fwd_mask_cmd("link-12") not in host.commands()
+
+
+def test_host_bridge_vnet_no_fwd_mask(host, conn):
+    define_vnet(host, VNet("ext", bridge="br0", forward="bridge", devices=[]))
+    start_vnets(host, "ext")
+    assert conn.networkLookupByName("ext").isActive()
+    assert not [c for c in host.commands() if c[0] == "sudo"]
 
 
 def test_unmanaged_vnet_never_started(host, lab):

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 SHUTDOWN_FLAGS = libvirt.VIR_DOMAIN_SHUTDOWN_GUEST_AGENT | libvirt.VIR_DOMAIN_SHUTDOWN_ACPI_POWER_BTN
 POLL = 0.5  # seconds between checks while waiting for clean shutdown
+GROUP_FWD_MASK = 0xfff8  # bridge forwards link-local 01:80:c2:00:00:0X frames (LLDP, 802.1X, ...); 0-2 can't be set
 
 
 @contextmanager
@@ -293,6 +294,17 @@ def _start_vnets(conn: libvirt.virConnect, host: Host, names: Iterable[str]) -> 
         elif not net.isActive():
             net.create()
             logger.info("%s: VNet `%s`: STARTED", host, name)
+            _set_fwd_mask(host, net)
+
+
+def _set_fwd_mask(host: Host, net: libvirt.virNetwork) -> None:
+    """Let the network's bridge forward link-local frames (LLDP, 802.1X, ...) between VMs.
+    Not for forward=bridge: that bridge belongs to the host, not to the network."""
+    if VNet.from_xml(net.XMLDesc()).forward == "bridge":
+        return
+    vnet = net.bridgeName()
+    host.run("sudo", "sh", "-c", f"echo {GROUP_FWD_MASK:#x} >/sys/class/net/{vnet}/bridge/group_fwd_mask")
+    logger.debug("%s: VNet `%s`: bridge %s group_fwd_mask %#x", host, net.name(), vnet, GROUP_FWD_MASK)
 
 
 def _stop_vnets(conn: libvirt.virConnect, host: Host, names: Iterable[str]) -> None:
