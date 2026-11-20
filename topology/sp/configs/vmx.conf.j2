@@ -24,6 +24,9 @@ interfaces {
     }
 {%- for name, ifc in interfaces.items() %}
     {{ name }} {
+{%- if ifc.description is defined %}
+        description "{{ ifc.description }}";
+{%- endif %}
         unit 0 {
             family inet {
                 address {{ ifc.ip }};

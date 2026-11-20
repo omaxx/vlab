@@ -21,7 +21,11 @@ def test_routers(devices):
     for name, d in devices.items():
         assert isinstance(d, VMX)
         assert d.id == int(name[1:])  # id = router number
-        assert d.mgmt.ip == f"172.255.1.{d.id}/24"
+        assert (d.mgmt.network, d.mgmt.ip, d.mgmt.dhcp) == ("mgmt-1", f"172.255.1.{d.id}/24", False)  # from template + own
+        assert (d.version, d.re_image, d.fpc_image) == (
+            "24.4R1-S2.9", "junos-vmx-x86-64-24.4R1-S2.9.qcow2", "vFPC-20241118.img",
+        )
+        assert d.dhcp_leases() == []  # static mgmt, no dhcp
 
 
 def test_links_and_ips(devices):
@@ -37,7 +41,7 @@ def test_links_and_ips(devices):
     assert len(ends) == 22
     num = {r: 9 if r in ("R10", "R20") else int(r[1:]) for r in ROUTERS}
     for link, ((a, ip_a), (b, ip_b)) in ((k, v) for k, v in ends.items() if len(v) == 2):
-        assert link == f"{a}-{b}" or link == f"{b}-{a}"
+        assert link == f"{a}_{b}" or link == f"{b}_{a}"
         assert ip_a.network == ip_b.network == IPv4Interface(f"10.0.{min(num[a], num[b])}{max(num[a], num[b])}.0/24").network
     assert all(len(v) == 2 for v in ends.values())  # every link has exactly two ends
 
@@ -54,3 +58,16 @@ def test_unique_macs_and_consoles(devices):
     assert len(macs) == len(set(macs))
     ports = [vm.telnet_port for d in devices.values() for vm in d.vms()]
     assert len(ports) == len(set(ports))
+
+
+def test_descriptions_point_to_peer_port(devices):
+    ends: dict[str, list[tuple[str, str]]] = {}
+    for d in devices.values():
+        for i, port in enumerate(d.ports):
+            assert port.p2p is not None
+            ends.setdefault(port.p2p, []).append((d.name, f"ge-0/0/{i}"))
+    for (a, pa), (b, pb) in ends.values():
+        assert devices[a].vars["interfaces"][pa]["description"] == f"-> {b} : {pb}"
+        assert devices[b].vars["interfaces"][pb]["description"] == f"-> {a} : {pa}"
+        cfg = devices[a].rendered_config
+        assert cfg is not None and f'description "-> {b} : {pb}";' in cfg
