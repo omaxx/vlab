@@ -33,6 +33,9 @@ class Linux(Device):
     def mac(self, n: int) -> str:
         return f"ca:ff:ee:{self.id:02d}:00:{n:02d}"
 
+    def all_ports(self) -> list[Port]:
+        return list(self.ports)
+
     def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:
         leases = []
         for n, p in enumerate(self.ports, 1):

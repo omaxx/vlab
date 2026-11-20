@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
 from typing import Literal
 
@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Network(DataClassDictMixin):
-    """Lab network shared by devices (e.g. mgmt): one libvirt VNet, always with vlab metadata (managed).
+    """Regular lab network (e.g. mgmt): one libvirt VNet with vlab metadata but no meta devices
+    (devices attach with port `network:`; p2p links come from port `p2p:` instead).
 
     forward=bridge wraps an existing host bridge (bridge required; no ip, dhcp, mtu).
     dhcp: ranges and/or fixed hosts; devices add their own fixed leases on deploy (Port.dhcp).
@@ -22,14 +23,11 @@ class Network(DataClassDictMixin):
     bridge: str | None = None  # default: same as name
     ip: str | None = None  # host IP with prefix, e.g. "172.255.1.254/24"
     forward: Literal["nat", "route", "open", "bridge"] | None = None  # None = isolated
-    devices: list[str] = field(default_factory=list)  # owning devices, empty = shared
     mtu: int | None = None  # None = libvirt default (1500)
     dhcp: DHCP | None = None
 
     def vnets(self) -> list[VNet]:
-        vnet = VNet(
-            self.name, self.bridge, self.ip, self.forward, devices=list(self.devices), mtu=self.mtu, dhcp=self.dhcp
-        )
+        vnet = VNet(self.name, self.bridge, self.ip, self.forward, mtu=self.mtu, dhcp=self.dhcp, managed=True)
         vnet.validate()
         return [vnet]
 

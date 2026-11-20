@@ -1,7 +1,9 @@
 """libvirt operations on a host. All libvirt calls of vlab live in this module.
 
-VNet rule: only networks with vlab metadata (VNet.managed) are started/stopped; others are never touched.
+VNet rules: only networks with vlab metadata (VNet.managed) are started/stopped; others are never touched.
 A managed network is stopped when no running VM is attached to it.
+Device networks (meta devices list) are created by attach_vnet and undefined by delete_vms when their
+last device is gone.
 """
 
 from collections.abc import Iterable, Iterator
@@ -14,6 +16,7 @@ import libvirt
 
 from ..host import Host
 from .vm import VM
+from .meta import NS
 from .vnet import DHCPHost, VNet
 
 logger = logging.getLogger(__name__)
@@ -100,22 +103,83 @@ def stop_vms(host: Host, *names: str, force: bool = False, timeout: float = 60) 
 
 
 def delete_vms(host: Host, *names: str) -> None:
-    """Force off and undefine VMs (incl. UEFI NVRAM), then stop their unused managed networks. Files stay."""
+    """Force off and undefine VMs (incl. UEFI NVRAM), stop their unused managed networks, then release
+    device networks: a device no longer having any VM on one is removed from its devices; network
+    undefined when none is left. Files stay."""
     with _connect(host) as conn:
+        used: set[tuple[str, str]] = set()  # (network, device) of deleted VMs
         for name in names:
             dom = conn.lookupByName(name)
             xml = dom.XMLDesc()
-            networks = VM.from_xml(xml).networks()
+            vm = VM.from_xml(xml)
+            networks = vm.networks()
+            if vm.device is not None:
+                used |= {(n, vm.device) for n in networks}
             if dom.isActive():
                 dom.destroy()
                 logger.info("%s: VM `%s`: STOPPED", host, name)
             has_nvram = ET.fromstring(xml).find("os/nvram") is not None  # UEFI vars file
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM if has_nvram else 0)
             logger.info("%s: VM `%s`: DELETED", host, name)
-            for iface in VM.from_xml(xml).interfaces:
+            for iface in vm.interfaces:
                 if iface.type == "network" and iface.mac:
                     _remove_dhcp_host(conn, host, iface.source, iface.mac)
             _stop_vnets(conn, host, networks)
+        remaining = {(n, v.device) for v in (VM.from_xml(d.XMLDesc()) for d in conn.listAllDomains()) for n in v.networks()}
+        for network, device in sorted(used - remaining):
+            _release_vnet(conn, host, network, device)
+
+
+def attach_vnet(host: Host, template: VNet, device: str) -> None:
+    """Device network for device: create from template (devices=[device]) if missing, else add device
+    to its devices. Existing networks without meta devices (regular, outside vlab) are used as they are."""
+    with _connect(host) as conn:
+        try:
+            net = conn.networkLookupByName(template.name)
+        except libvirt.libvirtError:
+            vnet = VNet(template.name, template.bridge, template.ip, template.forward, devices=[device],
+                        mtu=template.mtu, dhcp=template.dhcp)
+            conn.networkDefineXML(vnet.to_xml())
+            logger.info("%s: VNet `%s`: DEFINED for %s", host, vnet.name, device)
+            return
+        current = VNet.from_xml(net.XMLDesc())
+        if current.devices is None:
+            logger.debug("%s: VNet `%s`: no meta devices, used as is by %s", host, current.name, device)
+        elif device not in current.devices:
+            _set_devices(net, [*current.devices, device])
+            logger.info("%s: VNet `%s`: %s attached (devices: %s)", host, current.name, device,
+                        ", ".join([*current.devices, device]))
+
+
+def _release_vnet(conn: libvirt.virConnect, host: Host, network: str, device: str) -> None:
+    try:
+        net = conn.networkLookupByName(network)
+    except libvirt.libvirtError:
+        return
+    vnet = VNet.from_xml(net.XMLDesc())
+    if vnet.devices is None or device not in vnet.devices:
+        return
+    devices = [d for d in vnet.devices if d != device]
+    if devices:
+        _set_devices(net, devices)
+        logger.info("%s: VNet `%s`: %s detached (devices: %s)", host, network, device, ", ".join(devices))
+        return
+    if net.isActive():
+        net.destroy()
+    net.undefine()
+    logger.info("%s: VNet `%s`: DELETED (last device %s gone)", host, network, device)
+
+
+def _set_devices(net: libvirt.virNetwork, devices: list[str]) -> None:
+    """Replace the network's vlab metadata in place (no redefine/restart)."""
+    meta = ET.Element("network")  # libvirt puts it into the vlab namespace (key + NS)
+    elem = ET.SubElement(meta, "devices")
+    for d in devices:
+        ET.SubElement(elem, "device").text = d
+    flags = libvirt.VIR_NETWORK_UPDATE_AFFECT_CONFIG
+    if net.isActive():
+        flags |= libvirt.VIR_NETWORK_UPDATE_AFFECT_LIVE
+    net.setMetadata(libvirt.VIR_NETWORK_METADATA_ELEMENT, ET.tostring(meta, encoding="unicode"), "vlab", NS, flags)
 
 
 def set_dhcp_host(host: Host, network: str, lease: DHCPHost) -> None:

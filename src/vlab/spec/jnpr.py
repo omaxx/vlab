@@ -46,6 +46,9 @@ class Junos(Device):
     def images_dir(self, host: Host) -> str:
         return f"{host.images_dir}/junos/{self.model}/{self.version}"
 
+    def all_ports(self) -> list[Port]:
+        return [self.mgmt, *self.ports]
+
     def re_name(self, slot: int) -> str:
         return f"{self.name}~re{slot}"
 

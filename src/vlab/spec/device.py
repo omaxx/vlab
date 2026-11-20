@@ -9,8 +9,8 @@ from mashumaro.types import Discriminator
 
 from ..host import Host
 from ..utils import load_file
-from ..virt import VM, DHCPHost, VNet, define_vm, delete_vms, set_dhcp_host, start_vms, stop_vms
-from .network import define_missing_vnets
+from ..virt import VM, DHCPHost, VNet, attach_vnet, define_vm, delete_vms, set_dhcp_host, start_vms, stop_vms
+from .port import Port
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,20 @@ class Device(DataClassDictMixin):
         raise NotImplementedError
 
     def vnets(self) -> list[VNet]:
-        """Internal networks of this device."""
+        """Internal networks of this device (device networks: devices=[name])."""
         return []
+
+    def all_ports(self) -> list[Port]:
+        """Ports of the device spec (for p2p stub networks)."""
+        return []
+
+    def device_vnets(self) -> list[VNet]:
+        """Device networks to attach on deploy: internal ones + p2p stubs of ports (default template)."""
+        res = {v.name: v for v in self.vnets()}
+        for p in self.all_ports():
+            if p.p2p is not None and p.p2p not in res:
+                res[p.p2p] = VNet(p.p2p, devices=[self.name])
+        return list(res.values())
 
     def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:
         """Fixed DHCP leases (network name, lease) registered on deploy; removed by delete_vms via MAC."""
@@ -57,8 +69,11 @@ class Device(DataClassDictMixin):
         """Create VM files on host; keep existing ones unless overwrite."""
 
     def deploy(self, host: Host, overwrite: bool = False) -> None:
-        """Define missing internal VNets, prepare files, define VMs (not started), register DHCP leases."""
-        define_missing_vnets(host, self.vnets())
+        """Attach device networks (create or join), prepare files, define VMs (not started), register DHCP leases."""
+        for vnet in self.device_vnets():
+            vnet.validate()  # fail before any change
+        for vnet in self.device_vnets():
+            attach_vnet(host, vnet, self.name)
         self.prepare(host, overwrite)
         for vm in self.vms():
             define_vm(host, vm)

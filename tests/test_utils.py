@@ -41,7 +41,9 @@ def test_topology_yaml_and_jsonnet_match(n):
     j = Linux.from_dict(load_file(str(TOPOLOGY / f"test.jsonnet/srv-{n}.jsonnet")))
     assert y == j
     assert y.name == f"srv-{n}"
-    assert [(p.network, p.ip) for p in y.ports] == [("mgmt-1", f"172.255.1.{n}/24"), (f"srv-{n}", f"10.{n}.0.10/24")]
+    assert [(p.network, p.p2p, p.ip) for p in y.ports] == [
+        ("mgmt-1", None, f"172.255.1.{n}/24"), (None, f"srv-{n}", f"10.{n}.0.10/24"),
+    ]
 
 
 @pytest.mark.parametrize("ext, text", [("yaml", "- a\n- b\n"), ("json", "[1]"), ("jsonnet", "'x'"), ("yaml", "")])

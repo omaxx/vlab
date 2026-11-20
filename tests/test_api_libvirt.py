@@ -70,7 +70,7 @@ def lab(host, conn):
     """r1 on its own managed lab-1, r1+r2 on shared managed link-12, both on unmanaged infra and a bridge."""
     define_vnet(host, VNet("lab-1", devices=["r1"]))
     define_vnet(host, VNet("link-12", devices=["r1", "r2"]))
-    define_vnet(host, VNet("infra"))
+    define_vnet(host, VNet("infra"))  # created outside vlab
     conn.networkLookupByName("infra").create()
     for name, nets in (("r1", ["lab-1", "link-12", "infra"]), ("r2", ["link-12", "infra"])):
         ifaces = [Interface("network", n) for n in nets] + [Interface("bridge", "br0")]
@@ -126,12 +126,48 @@ def test_stop_vnets_explicit(host, lab):
     assert not {"lab-1", "link-12"} & active_nets(lab)
 
 
+def defined_nets(conn) -> dict[str, list[str] | None]:
+    return {n.name(): VNet.from_xml(n.XMLDesc()).devices for n in conn.listAllNetworks()}
+
+
 def test_delete_vms(host, lab):
     start_vms(host, "r1")
     delete_vms(host, "r1")
     assert "r1" not in [vm.name for vm, _ in list_vms(host)]
-    assert "lab-1" not in active_nets(lab)
-    assert "lab-1" in [n.name() for n in lab.listAllNetworks()]  # stopped, still defined
+    nets = defined_nets(lab)
+    assert "lab-1" not in nets  # r1 was its only device: undefined
+    assert nets["link-12"] == ["r2"]  # shared: r1 removed from devices, network kept
+    assert "infra" in nets  # unmanaged: untouched
+    delete_vms(host, "r2")
+    assert "link-12" not in defined_nets(lab)
+
+
+def test_delete_keeps_network_while_device_has_vms_on_it(host, conn):
+    define_vnet(host, VNet("d-int", devices=["d"]))
+    for name in ("d-a", "d-b"):
+        define_vm(host, VM(name, device="d", interfaces=[Interface("network", "d-int")]))
+    delete_vms(host, "d-a")
+    assert defined_nets(conn)["d-int"] == ["d"]  # d-b still on it
+    delete_vms(host, "d-b")
+    assert "d-int" not in defined_nets(conn)
+
+
+def test_attach_vnet(host, conn):
+    from vlab.virt import attach_vnet
+    attach_vnet(host, VNet("p2p-x", devices=["a"]), "a")
+    assert defined_nets(conn)["p2p-x"] == ["a"]  # created from template
+    attach_vnet(host, VNet("p2p-x", devices=["b"]), "b")
+    attach_vnet(host, VNet("p2p-x", devices=["b"]), "b")  # idempotent
+    conn.networkLookupByName("p2p-x").create()
+    attach_vnet(host, VNet("p2p-x", devices=["c"]), "c")  # live update on running network
+    assert defined_nets(conn)["p2p-x"] == ["a", "b", "c"]
+    define_vnet(host, VNet("mgmt", ip="10.5.0.254/24", managed=True))
+    attach_vnet(host, VNet("mgmt", devices=["a"]), "a")  # regular network: used as is
+    define_vnet(host, VNet("outside"))
+    attach_vnet(host, VNet("outside", devices=["a"]), "a")  # unmanaged: untouched
+    nets = defined_nets(conn)
+    assert nets["mgmt"] is None and nets["outside"] is None
+    assert VNet.from_xml(conn.networkLookupByName("mgmt").XMLDesc()).managed
 
 
 def test_delete_inactive_vm(host, lab):

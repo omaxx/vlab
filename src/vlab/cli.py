@@ -107,7 +107,7 @@ def delete(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: boo
 
 @main.group("list")
 def list_() -> None:
-    """Show VMs or VNets on host (running in green; VNet devices "-" = not managed by vlab)."""
+    """Show VMs or VNets on host (running in green). VNet kind: device (p2p/internal), network (regular), - (outside vlab)."""
 
 
 @list_.command("vms")
@@ -125,10 +125,11 @@ def list_vms(host: Host) -> None:
 @list_.command("vnets")
 @click.pass_obj
 def list_vnets(host: Host) -> None:
-    table = Table("name", "devices", "bridge", "forward", "ip")
+    table = Table("name", "kind", "devices", "bridge", "forward", "ip")
     for vnet, active in virt.list_vnets(host):
+        kind = "device" if vnet.devices is not None else "network" if vnet.managed else "-"
         table.add_row(
-            vnet.name, "-" if vnet.devices is None else ", ".join(vnet.devices), vnet.bridge or "", vnet.forward or "", vnet.ip or "",
+            vnet.name, kind, ", ".join(vnet.devices or []), vnet.bridge or "", vnet.forward or "", vnet.ip or "",
             style="green" if active else "",
         )
     Console().print(table)

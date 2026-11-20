@@ -66,8 +66,8 @@ def test_deploy_topology(monkeypatch):
         "--overwrite",
     )
     assert r.exit_code == 0, r.output
-    assert order == [  # all networks (topology, then -n) before all devices (topology, then -d)
-        ("network", "srv-1"), ("network", "p2p-1"), ("network", "p2p-2"), ("network", "srv-2"), ("network", "mgmt-1"),
+    assert order == [  # all networks (topology has none now, then -n) before all devices (topology, then -d)
+        ("network", "mgmt-1"),
         ("device", "srv-1", True), ("device", "vmx-1", True), ("device", "vmx-2", True), ("device", "srv-2", True),
         ("device", "srv-1", True),
     ]

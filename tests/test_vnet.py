@@ -109,3 +109,17 @@ def test_from_xml_netmask():
     """libvirt's stock 'default' network uses netmask=, not prefix=."""
     xml = "<network><name>default</name><ip address='192.168.122.1' netmask='255.255.255.0'/></network>"
     assert VNet.from_xml(xml).ip == "192.168.122.1/24"
+
+
+def test_regular_network_meta_without_devices():
+    xml = VNet("mgmt-1", managed=True).to_xml()
+    ns = "{https://omaxx.net/vlab}"
+    meta = ET.fromstring(xml).find(f"metadata/{ns}network")
+    assert meta is not None and meta.find(f"{ns}devices") is None
+    back = VNet.from_xml(xml)
+    assert (back.managed, back.devices) == (True, None)
+
+
+def test_bridge_name_length():
+    with pytest.raises(ValueError, match="longer than 15"):
+        VNet("a-very-long-net-1").to_xml()

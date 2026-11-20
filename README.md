@@ -40,16 +40,16 @@ id: 1                     # MACs ca:ff:ee:01:00:<port>, host ifnames srv-1-<port
 user: $USER
 ssh_key_files:
   - ~/.ssh/id_ed25519.pub
-ports:
-  - network: mgmt-1
+ports:                    # each: network | bridge | p2p | udp
+  - network: mgmt-1       # existing libvirt network (not checked)
     ip: 172.255.1.1/24
     gateway: 172.255.1.254
     dns: [172.255.1.254]
     dhcp: true            # fixed DHCP lease + DNS name "srv-1" in mgmt-1 (live, no restart)
-  - network: p2p-1
-    ip: 192.168.1.1/24
-  - bridge: br0           # host bridge instead of libvirt network
-    target: vm01-p3       # host-side interface name (default vnetN)
+  - p2p: srv-1            # link network: created by first device, shared, removed with last device
+    ip: 10.1.0.10/24
+  - bridge: br0           # existing host bridge (not checked)
+    target: srv-1-p3      # host-side interface name (default <device>-<N>)
     model: e1000          # virtio (default), e1000, e1000e, rtl8139
   - udp: 127.0.0.1:10002  # UDP tunnel to another VM's NIC, no bridge
     local: 127.0.0.1:10001
@@ -69,10 +69,12 @@ devices:
     type: jnpr/vmx        # Juniper vMX (RE + FPC VMs); also jnpr/vqfx
     config: vmx.conf.j2   # Jinja2 template in configs/, rendered with vars
     vars: {...}
-networks:
-  srv-1:
-    devices: [srv-1, vmx-1]
+    ports:
+      - p2p: srv-1        # same p2p name on two devices = link between them
+networks: {}              # regular networks (like networks/mgmt.yaml)
 ```
+
+`vlab list vnets` kind: `device` (p2p / device-internal, with its devices), `network` (regular), `-` (created outside vlab, never touched).
 
 Jsonnet keeps repeated devices short (`topology/test.jsonnet/`):
 

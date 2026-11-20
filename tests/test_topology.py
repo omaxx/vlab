@@ -10,7 +10,7 @@ from vlab.utils import load_file
 from conftest import TOPOLOGY
 
 DEVICES = ["srv-1", "vmx-1", "vmx-2", "srv-2"]
-NETWORKS = ["mgmt-1", "srv-1", "p2p-1", "p2p-2", "srv-2"]
+NETWORKS = ["mgmt-1"]  # regular networks; p2p links come from device ports
 
 
 def yaml_topo():
@@ -43,17 +43,19 @@ def test_yaml_topology_equals_jsonnet_files():
 def test_links(topo):
     devices, networks = topo
     attached: dict[str, set[str]] = {n: set() for n in NETWORKS}
+    assert set(networks) == set(NETWORKS)
     for d in devices.values():
         for vm in d.vms():
             for net in vm.networks():
                 if net in attached:
                     attached[net].add(d.name)
-    assert attached["srv-1"] == {"srv-1", "vmx-1"}
-    assert attached["p2p-1"] == attached["p2p-2"] == {"vmx-1", "vmx-2"}
-    assert attached["srv-2"] == {"vmx-2", "srv-2"}
     assert attached["mgmt-1"] == set(DEVICES)
-    for name in ("srv-1", "srv-2", "p2p-1", "p2p-2"):  # network spec owners = attached devices
-        assert set(networks[name].devices) == attached[name]
+    p2p: dict[str, set[str]] = {}
+    for d in devices.values():
+        for vnet in d.device_vnets():
+            if not vnet.name.startswith(d.name + "~"):  # skip vMX internal ~int/~fab
+                p2p.setdefault(vnet.name, set()).add(d.name)
+    assert p2p == {"srv-1": {"srv-1", "vmx-1"}, "p2p-1": {"vmx-1", "vmx-2"}, "p2p-2": {"vmx-1", "vmx-2"}, "srv-2": {"vmx-2", "srv-2"}}
 
 
 def test_unique_ids_macs_consoles_mgmt_ips(topo):
@@ -95,7 +97,7 @@ def write(tmp_path, text):
 def test_load_topology_names_from_keys(tmp_path):
     t = load_topology(write(tmp_path, "devices:\n  r1: {type: linux, id: 1, user: u}\nnetworks:\n  lan: {}\n"))
     assert [d.name for d in t.devices] == ["r1"] and [n.name for n in t.networks] == ["lan"]
-    assert t.networks[0].devices == []
+    assert t.networks[0].vnets()[0].managed and t.networks[0].vnets()[0].devices is None
 
 
 @pytest.mark.parametrize("text, err", [

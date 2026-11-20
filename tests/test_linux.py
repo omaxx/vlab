@@ -57,7 +57,7 @@ def test_port_nic_options():
     ]
 
 
-@pytest.mark.parametrize("port", [Port(), Port(network="a", bridge="b"), Port(bridge="b", udp="1.2.3.4:5")])
+@pytest.mark.parametrize("port", [Port(), Port(network="a", bridge="b"), Port(bridge="b", udp="1.2.3.4:5"), Port(network="a", p2p="b")])
 def test_port_needs_exactly_one_source(port):
     with pytest.raises(ValueError, match="exactly one"):
         Linux(name="x", id=1, user="u", ports=[port]).vms()
@@ -204,3 +204,10 @@ def test_static_routes():
     eth = yaml.safe_load(d.network_config())["ethernets"]
     assert eth["port1"]["routes"] == [{"to": "default", "via": "172.255.1.254"}]
     assert eth["port2"]["routes"] == [{"to": "10.2.0.0/24", "via": "10.1.0.1"}, {"to": "10.9.0.0/16", "via": "10.1.0.2"}]
+
+
+def test_p2p_port():
+    d = Linux(name="srv-1", id=1, user="u", ports=[Port("mgmt-1"), Port(p2p="srv-1")])
+    assert [(i.type, i.source) for i in d.vms()[0].interfaces] == [("network", "mgmt-1"), ("network", "srv-1")]
+    from vlab.virt import VNet
+    assert d.device_vnets() == [VNet("srv-1", devices=["srv-1"])]  # mgmt-1 (network:) is not a device network

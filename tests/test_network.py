@@ -21,16 +21,15 @@ def host():
 
 def test_vnets():
     n = Network("mgmt-1", ip="172.255.1.254/24", forward="nat")
-    assert n.vnets() == [VNet("mgmt-1", None, "172.255.1.254/24", "nat", devices=[])]
-    assert n.vnets()[0].managed
-    assert Network("link-12", devices=["r1", "r2"]).vnets()[0].devices == ["r1", "r2"]
+    assert n.vnets() == [VNet("mgmt-1", None, "172.255.1.254/24", "nat", managed=True)]
+    assert n.vnets()[0].managed and n.vnets()[0].devices is None  # regular: meta, no meta devices
 
 
 def test_deploy(host):
     Network("mgmt-1", ip="172.255.1.254/24", forward="nat").deploy(host)
     (vnet, active), = [(v, a) for v, a in list_vnets(host) if v.name == "mgmt-1"]
     assert not active
-    assert (vnet.ip, vnet.forward, vnet.devices) == ("172.255.1.254/24", "nat", [])
+    assert (vnet.ip, vnet.forward, vnet.managed, vnet.devices) == ("172.255.1.254/24", "nat", True, None)
 
 
 def test_deploy_existing_kept(host):

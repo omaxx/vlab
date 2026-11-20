@@ -11,7 +11,7 @@ local ids = { '1': 3, '2': 5 };
     re_image: 'junos-vmx-x86-64-24.4R1-S2.9.qcow2',
     fpc_image: 'vFPC-20241118.img',
     mgmt: { network: 'mgmt-1', ip: '172.255.1.%d/24' % id, dhcp: true },
-    ports: [{ network: 'p2p-1' }, { network: 'p2p-2' }, { network: 'srv-%d' % n }],
+    ports: [{ p2p: 'p2p-1' }, { p2p: 'p2p-2' }, { p2p: 'srv-%d' % n }],
     config: 'vmx.conf.j2',  // configs/vmx.conf.j2
     vars: {
       root_password: '$6$vlabvlab$5dQUFdNoOCf9So8AVoZ6h0YNmeTTcxbnITrhfaOBSO99pynAJEjKpJ28VT/7YgsVTfAbezIj2GwQjEF.gAD3m.',  // lab only: "vlab123"

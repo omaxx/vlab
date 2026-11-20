@@ -45,24 +45,29 @@ class VNet:
 
     forward: None = isolated; nat/route/open = libvirt creates the bridge;
     bridge = wrap an existing host bridge (bridge required; no ip, dhcp, mtu).
-    devices: vlab metadata. None = created outside vlab (no metadata), never started/stopped by vlab.
-    A list (may be empty, e.g. shared mgmt network) = managed by vlab; names = devices owning it.
+    vlab metadata <vlab:network>:
+      managed=False: none (created outside vlab) - never started/stopped/changed by vlab
+      managed=True, devices=None: regular network (Network spec)
+      devices=[...]: device network (p2p stub, device-internal) - devices using it; undefined when empty
     """
 
     name: str
     bridge: str | None = None  # default: same as name (except forward=bridge: required)
     ip: str | None = None  # host IP with prefix, e.g. "172.255.1.254/24"
     forward: Literal["nat", "route", "open", "bridge"] | None = None
-    devices: list[str] | None = None
+    devices: list[str] | None = None  # set -> device network (implies managed)
     mtu: int | None = None  # None = libvirt default (1500)
     dhcp: DHCP | None = None
+    managed: bool = False
 
-    @property
-    def managed(self) -> bool:
-        return self.devices is not None
+    def __post_init__(self) -> None:
+        if self.devices is not None:
+            self.managed = True
 
     def validate(self) -> None:
         """Raise ValueError for combinations libvirt rejects or that can't work."""
+        if len(self.bridge or self.name) > 15:  # Linux interface name limit
+            raise ValueError(f"VNet {self.name}: bridge name {self.bridge or self.name!r} longer than 15 chars")
         if self.forward == "bridge":
             if self.bridge is None:
                 raise ValueError(f"VNet {self.name}: forward=bridge needs bridge (existing host bridge)")
@@ -81,11 +86,8 @@ class VNet:
         self.validate()
         net = ET.Element("network")
         ET.SubElement(net, "name").text = self.name
-        if self.devices is not None:
-            meta = ET.SubElement(ET.SubElement(net, "metadata"), tag("network"))
-            devices = ET.SubElement(meta, tag("devices"))
-            for n in self.devices:
-                ET.SubElement(devices, tag("device")).text = n
+        if self.managed:
+            ET.SubElement(net, "metadata").append(meta_xml(self.devices))
         if self.forward:
             ET.SubElement(net, "forward", mode=self.forward)
         if self.forward == "bridge":
@@ -114,18 +116,30 @@ class VNet:
         ip = net.find("ip")
         dhcp = ip.find("dhcp") if ip is not None else None
         meta = net.find(f"metadata/{tag('network')}")
+        devices = meta.find(tag("devices")) if meta is not None else None
         return cls(
             name=net.findtext("name", ""),
             bridge=bridge.get("name") if bridge is not None else None,
             ip=_ip_from_xml(ip),
             forward=forward.get("mode") if forward is not None else None,  # type: ignore[arg-type]
-            devices=[d.text or "" for d in meta.iterfind(f"{tag('devices')}/{tag('device')}")] if meta is not None else None,
+            devices=[d.text or "" for d in devices.iterfind(tag("device"))] if devices is not None else None,
             mtu=int(mtu.get("size", "0")) if mtu is not None else None,
             dhcp=DHCP(
                 ranges=[DHCPRange(r.get("start", ""), r.get("end", "")) for r in dhcp.iterfind("range")],
                 hosts=[DHCPHost.from_xml(h) for h in dhcp.iterfind("host")],
             ) if dhcp is not None else None,
+            managed=meta is not None,
         )
+
+
+def meta_xml(devices: list[str] | None) -> ET.Element:
+    """<vlab:network> metadata element, with <vlab:devices> only for device networks."""
+    meta = ET.Element(tag("network"))
+    if devices is not None:
+        elem = ET.SubElement(meta, tag("devices"))
+        for d in devices:
+            ET.SubElement(elem, tag("device")).text = d
+    return meta
 
 
 def _ip_from_xml(ip: ET.Element | None) -> str | None:

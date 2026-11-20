@@ -1,5 +1,6 @@
 from .api import (
     define_vm,
+    attach_vnet,
     define_vnet,
     delete_vms,
     list_vms,
@@ -24,6 +25,7 @@ __all__ = [
     "DHCPHost",
     "DHCPRange",
     "define_vm",
+    "attach_vnet",
     "define_vnet",
     "delete_vms",
     "list_vms",
