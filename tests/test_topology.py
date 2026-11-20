@@ -78,7 +78,7 @@ def test_routing_is_symmetric(topo):
     assert isinstance(srv1, Linux) and isinstance(srv2, Linux) and isinstance(vmx1, VMX) and isinstance(vmx2, VMX)
 
     def addrs(vmx):
-        return {str(IPv4Interface(i["address"]).ip) for i in vmx.vars["interfaces"].values()}
+        return {str(IPv4Interface(i["ip"]).ip) for i in vmx.vars["interfaces"].values()}
 
     assert srv1.ports[1].routes == {"10.2.0.0/24": "10.1.0.1"} and "10.1.0.1" in addrs(vmx1)
     assert srv2.ports[1].routes == {"10.1.0.0/24": "10.2.0.1"} and "10.2.0.1" in addrs(vmx2)
