@@ -7,6 +7,7 @@ A managed network is stopped when no running VM is attached to it.
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 import logging
+import time
 import xml.etree.ElementTree as ET
 
 import libvirt
@@ -16,6 +17,9 @@ from .vm import VM
 from .vnet import VNet
 
 logger = logging.getLogger(__name__)
+
+SHUTDOWN_FLAGS = libvirt.VIR_DOMAIN_SHUTDOWN_GUEST_AGENT | libvirt.VIR_DOMAIN_SHUTDOWN_ACPI_POWER_BTN
+POLL = 0.5  # seconds between checks while waiting for clean shutdown
 
 
 @contextmanager
@@ -70,14 +74,28 @@ def start_vms(host: Host, *names: str) -> None:
                 logger.info("%s: VM `%s`: STARTED", host, name)
 
 
-def stop_vms(host: Host, *names: str) -> None:
-    """Force off VMs, then stop their managed networks that are no longer used."""
+def stop_vms(host: Host, *names: str, force: bool = False, timeout: float = 60) -> None:
+    """Stop VMs, then their managed networks that are no longer used.
+
+    Clean shutdown (guest agent or ACPI power button) for all VMs at once, wait up to timeout seconds,
+    then force off what still runs. force=True: force off right away.
+    """
     with _connect(host) as conn:
-        for name in names:
-            dom = conn.lookupByName(name)
+        doms = [conn.lookupByName(name) for name in names]
+        running = [d for d in doms if d.isActive()]
+        if not force and running:
+            for dom in running:
+                _shutdown(host, dom)
+            deadline = time.monotonic() + timeout
+            while any(d.isActive() for d in running) and time.monotonic() < deadline:
+                time.sleep(POLL)
+        for dom in running:
             if dom.isActive():
                 dom.destroy()
-                logger.info("%s: VM `%s`: STOPPED", host, name)
+                logger.info("%s: VM `%s`: STOPPED%s", host, dom.name(), "" if force else " (forced after timeout)")
+            else:
+                logger.info("%s: VM `%s`: STOPPED", host, dom.name())
+        for dom in doms:
             _stop_vnets(conn, host, VM.from_xml(dom.XMLDesc()).networks())
 
 
@@ -106,6 +124,19 @@ def stop_vnets(host: Host, *names: str) -> None:
     """Stop managed networks that no running VM uses."""
     with _connect(host) as conn:
         _stop_vnets(conn, host, names)
+
+
+def _shutdown(host: Host, dom: libvirt.virDomain) -> None:
+    """Ask guest to shut down: guest agent or ACPI; plain shutdown() if the driver rejects these flags."""
+    try:
+        dom.shutdownFlags(SHUTDOWN_FLAGS)
+        return
+    except libvirt.libvirtError as e:
+        logger.debug("%s: VM `%s`: shutdown via agent/ACPI failed: %s", host, dom.name(), e)
+    try:
+        dom.shutdown()
+    except libvirt.libvirtError as e:
+        logger.debug("%s: VM `%s`: shutdown failed: %s", host, dom.name(), e)
 
 
 def _start_vnets(conn: libvirt.virConnect, host: Host, names: Iterable[str]) -> None:

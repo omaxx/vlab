@@ -259,6 +259,7 @@ uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml -d topology/test.jsonnet/v
 uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml --overwrite
 
 # start / stop: VM names, -d DEVICE (repeatable) or --all (VMs with vlab metadata)
+# stop: clean shutdown (guest agent / ACPI), power off after --timeout 60; --force: power off now
 uv run vlab -v start --all
 uv run vlab -v stop -d vm-01
 

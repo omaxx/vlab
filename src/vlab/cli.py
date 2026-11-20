@@ -79,10 +79,14 @@ def start(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool
 
 @main.command()
 @vm_selection
+@click.option("--force", is_flag=True, help="power off right away, no clean shutdown")
+@click.option("--timeout", default=60.0, show_default=True, help="seconds to wait for clean shutdown before power off")
 @click.pass_obj
-def stop(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool) -> None:
-    """Force off VMs, stop vlab VNets no longer used."""
-    virt.stop_vms(host, *select_vms(host, vms, devices, all_))
+def stop(
+    host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool, force: bool, timeout: float
+) -> None:
+    """Shut down VMs (power off after --timeout), stop vlab VNets no longer used."""
+    virt.stop_vms(host, *select_vms(host, vms, devices, all_), force=force, timeout=timeout)
 
 
 @main.command()
@@ -104,8 +108,9 @@ def list_() -> None:
 def list_vms(host: Host) -> None:
     table = Table("name", "device", "interfaces", "disks")
     for vm, active in virt.list_vms(host):
-        ifaces = ", ".join(f"net({i.network})" if i.network else f"br({i.bridge})" for i in vm.interfaces)
-        table.add_row(vm.name, vm.device or "", ifaces, "\n".join(vm.disks), style="green" if active else "")
+        ifaces = ", ".join(f"{i.type}({i.source})" for i in vm.interfaces)
+        disks = "\n".join(d.file for d in vm.disks)
+        table.add_row(vm.name, vm.device or "", ifaces, disks, style="green" if active else "")
     Console().print(table)
 
 

@@ -16,7 +16,7 @@ class TwoVms(Device):
     """Device type with its own naming: <name>-a, <name>-b on an internal VNet."""
 
     def vms(self):
-        net = [Interface(network=f"{self.name}-int")]
+        net = [Interface("network", f"{self.name}-int")]
         return [VM(f"{self.name}-a", device=self.name, interfaces=net), VM(f"{self.name}-b", device=self.name, interfaces=net)]
 
     def vnets(self):

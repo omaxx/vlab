@@ -22,7 +22,7 @@ def recorded(monkeypatch):
     vms = [(VM("r1", device="r1"), True), (VM("r2", device="r2"), False), (VM("other"), False)]
     monkeypatch.setattr(virt, "list_vms", lambda host: vms)
     monkeypatch.setattr(virt, "start_vms", lambda host, *n: calls.append(("start", n)))
-    monkeypatch.setattr(virt, "stop_vms", lambda host, *n: calls.append(("stop", n)))
+    monkeypatch.setattr(virt, "stop_vms", lambda host, *n, force, timeout: calls.append(("stop", n)))
     monkeypatch.setattr(spec, "delete", lambda host, *n, keep_files: calls.append(("delete", n, keep_files)))
     return calls
 
@@ -108,10 +108,10 @@ def test_verbosity(monkeypatch, flags, level):
 
 
 def test_list(monkeypatch):
-    from vlab.virt import Interface, VNet
-    monkeypatch.setattr(virt, "list_vms", lambda host: [(VM("r1", device="r1", interfaces=[Interface(bridge="br0")], disks=["/d.qcow2"]), True)])
+    from vlab.virt import Disk, Interface, VNet
+    monkeypatch.setattr(virt, "list_vms", lambda host: [(VM("r1", device="r1", interfaces=[Interface("bridge", "br0")], disks=[Disk("/d.qcow2", "vda")]), True)])
     monkeypatch.setattr(virt, "list_vnets", lambda host: [(VNet("mgmt-1", ip="172.255.1.254/24", forward="nat"), True)])
     r = invoke("list", "vms")
-    assert r.exit_code == 0 and "r1" in r.output and "br(br0)" in r.output and "/d.qcow2" in r.output
+    assert r.exit_code == 0 and "r1" in r.output and "bridge(br0)" in r.output and "/d.qcow2" in r.output
     r = invoke("list", "vnets")
     assert r.exit_code == 0 and "mgmt-1" in r.output and "nat" in r.output

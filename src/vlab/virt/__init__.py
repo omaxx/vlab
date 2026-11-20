@@ -9,11 +9,12 @@ from .api import (
     stop_vms,
     stop_vnets,
 )
-from .vm import VM, Interface
+from .vm import VM, Disk, Interface
 from .vnet import VNet
 
 __all__ = [
     "VM",
+    "Disk",
     "Interface",
     "VNet",
     "define_vm",

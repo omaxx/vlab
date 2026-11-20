@@ -42,7 +42,13 @@ ports:
   - network: p2p-1
     ip: 192.168.1.1/24
   - bridge: br0           # host bridge instead of libvirt network
+    target: vm01-p3       # host-side interface name (default vnetN)
+    model: e1000          # virtio (default), e1000, e1000e, rtl8139
+  - udp: 127.0.0.1:10002  # UDP tunnel to another VM's NIC, no bridge
+    local: 127.0.0.1:10001
 ```
+
+cloud-init installs `qemu-guest-agent`: clean shutdown and `virsh domifaddr <vm> --source agent`.
 
 Jsonnet keeps repeated devices short (`topology/test.jsonnet/`):
 
@@ -57,6 +63,7 @@ Jsonnet keeps repeated devices short (`topology/test.jsonnet/`):
 uv run vlab -v deploy -n topology/test.yaml/mgmt-1.yaml -d topology/test.yaml/vm-1.yaml
 
 # start / stop by device, VM name or --all
+# stop = clean shutdown, power off after --timeout (60s); --force = power off right away
 uv run vlab -v start --all
 uv run vlab -v stop -d vm-01
 

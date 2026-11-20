@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from ..host import Host
-from ..virt import VM, Interface
+from ..virt import VM, Disk, Interface
+from ..virt.vm import NicModel, NicType
 from .device import Device
 
 logger = logging.getLogger(__name__)
@@ -12,11 +13,25 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Port:
-    network: str | None = None  # libvirt network name, or
+    """NIC: exactly one of network (libvirt network), bridge (host bridge), udp (remote "addr:port" + local)."""
+
+    network: str | None = None
     ip: str | None = None  # with prefix, e.g. "172.255.1.1/24"
     gateway: str | None = None
     dns: list[str] = field(default_factory=list)
-    bridge: str | None = None  # host bridge instead of network
+    bridge: str | None = None
+    udp: str | None = None  # remote "addr:port"
+    local: str | None = None  # own "addr:port" for udp
+    target: str | None = None  # host-side interface name (network/bridge), e.g. "vm01-p1"
+    model: NicModel = "virtio"
+
+    def interface(self, mac: str) -> Interface:
+        sources = {"network": self.network, "bridge": self.bridge, "udp": self.udp}
+        given = [(t, s) for t, s in sources.items() if s is not None]
+        if len(given) != 1:
+            raise ValueError("Port needs exactly one of network, bridge or udp")
+        type_, source = given[0]
+        return Interface(cast(NicType, type_), source, target=self.target, local=self.local, mac=mac, model=self.model)
 
 
 @dataclass
@@ -24,6 +39,7 @@ class Debian(Device):
     """Plain Debian cloud image device: one VM named like the device, qcow2 overlay on base image + cloud-init seed.
 
     MAC of port N (1-based): c0:ff:ee:<id>:00:<N>, id as 2 decimal digits.
+    cloud-init installs and starts qemu-guest-agent (needs package mirror access, e.g. via NAT mgmt network).
     """
 
     id: int  # 1-99
@@ -45,9 +61,11 @@ class Debian(Device):
                 device=self.name,
                 vcpus=self.vcpus,
                 memory=self.memory,
-                interfaces=[
-                    Interface(network=p.network, bridge=p.bridge, mac=self.mac(n)) for n, p in enumerate(self.ports, 1)
+                disks=[
+                    Disk(f"{self.name}.qcow2", "vda"),
+                    Disk("seed.iso", "sda", format="raw", bus="sata", device="cdrom"),
                 ],
+                interfaces=[p.interface(self.mac(n)) for n, p in enumerate(self.ports, 1)],
             )
         ]
 
@@ -65,7 +83,10 @@ class Debian(Device):
                     "sudo": "ALL=(ALL) NOPASSWD:ALL",
                     "ssh_authorized_keys": ssh_keys,
                 }
-            ]
+            ],
+            "packages": ["qemu-guest-agent"],
+            # agent unit is started by udev on the virtio port, which appeared before the package was installed
+            "runcmd": [["systemctl", "start", "qemu-guest-agent"]],
         }
         return "#cloud-config\n" + json.dumps(cfg, indent=2) + "\n"
 

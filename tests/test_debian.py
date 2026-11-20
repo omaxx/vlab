@@ -4,6 +4,7 @@ import pytest
 import yaml
 
 from vlab.spec import Debian, Port
+from vlab.virt import Disk, Interface
 
 from conftest import FakeHost
 
@@ -32,17 +33,34 @@ def test_mac():
 def test_one_vm_named_like_node():
     (vm,) = make(vcpus=2, memory=2048).vms()
     assert (vm.name, vm.device, vm.vcpus, vm.memory) == ("r3", "r3", 2, 2048)
-    assert [(i.network, i.bridge, i.mac) for i in vm.interfaces] == [
-        ("mgmt-1", None, "c0:ff:ee:03:00:01"),
-        ("p2p-1", None, "c0:ff:ee:03:00:02"),
-        (None, "br0", "c0:ff:ee:03:00:03"),
+    assert [(i.type, i.source, i.mac) for i in vm.interfaces] == [
+        ("network", "mgmt-1", "c0:ff:ee:03:00:01"),
+        ("network", "p2p-1", "c0:ff:ee:03:00:02"),
+        ("bridge", "br0", "c0:ff:ee:03:00:03"),
+    ]
+    assert vm.disks == [
+        Disk("r3.qcow2", "vda"),
+        Disk("seed.iso", "sda", format="raw", bus="sata", device="cdrom"),
     ]
     assert make().vnets() == []
 
 
-def test_port_needs_network_or_bridge():
-    with pytest.raises(ValueError):
-        Debian(name="x", id=1, user="u", ports=[Port()]).vms()
+def test_port_nic_options():
+    d = Debian(name="r4", id=4, user="u", ports=[
+        Port(network="mgmt-1", target="r4-p1", model="e1000"),
+        Port(udp="127.0.0.1:10002", local="127.0.0.1:10001"),
+    ])
+    (vm,) = d.vms()
+    assert vm.interfaces == [
+        Interface("network", "mgmt-1", target="r4-p1", mac="c0:ff:ee:04:00:01", model="e1000"),
+        Interface("udp", "127.0.0.1:10002", local="127.0.0.1:10001", mac="c0:ff:ee:04:00:02"),
+    ]
+
+
+@pytest.mark.parametrize("port", [Port(), Port(network="a", bridge="b"), Port(bridge="b", udp="1.2.3.4:5")])
+def test_port_needs_exactly_one_source(port):
+    with pytest.raises(ValueError, match="exactly one"):
+        Debian(name="x", id=1, user="u", ports=[port]).vms()
 
 
 def test_meta_data_is_yaml():
@@ -56,6 +74,9 @@ def test_user_data():
     assert user["name"] == "alice"
     assert user["sudo"] == "ALL=(ALL) NOPASSWD:ALL"
     assert user["ssh_authorized_keys"] == ["ssh-ed25519 AAAA key: with colon"]
+    cfg = yaml.safe_load(text)
+    assert cfg["packages"] == ["qemu-guest-agent"]
+    assert cfg["runcmd"] == [["systemctl", "start", "qemu-guest-agent"]]
 
 
 def test_network_config():

@@ -8,7 +8,7 @@ import pytest
 
 from vlab.host import Host
 from vlab.virt import (
-    VM, VNet, Interface, define_vm, define_vnet, delete_vms, list_vms, list_vnets,
+    VM, VNet, Disk, Interface, define_vm, define_vnet, delete_vms, list_vms, list_vnets,
     start_vms, start_vnets, stop_vms, stop_vnets,
 )
 
@@ -50,7 +50,10 @@ def test_define_vnet_existing_name_fails(host, conn):
 
 
 def test_define_vm(host, conn):
-    vm = VM("vm-01", vcpus=2, memory=2048, interfaces=[Interface(network="mgmt-1", mac="c0:ff:ee:01:00:01")])
+    vm = VM(
+        "vm-01", vcpus=2, memory=2048, disks=[Disk("vm-01.qcow2", "vda")],
+        interfaces=[Interface("network", "mgmt-1", mac="c0:ff:ee:01:00:01")],
+    )
     define_vm(host, vm)
     dom = conn.lookupByName("vm-01")
     assert dom.isPersistent()
@@ -70,7 +73,7 @@ def lab(host, conn):
     define_vnet(host, VNet("infra"))
     conn.networkLookupByName("infra").create()
     for name, nets in (("r1", ["lab-1", "link-12", "infra"]), ("r2", ["link-12", "infra"])):
-        ifaces = [Interface(network=n) for n in nets] + [Interface(bridge="br0")]
+        ifaces = [Interface("network", n) for n in nets] + [Interface("bridge", "br0")]
         define_vm(host, VM(name, device=name, interfaces=ifaces))
     return conn
 
@@ -134,3 +137,41 @@ def test_delete_vms(host, lab):
 def test_delete_inactive_vm(host, lab):
     delete_vms(host, "r2")
     assert "r2" not in [vm.name for vm, _ in list_vms(host)]
+
+
+def test_stop_clean_shutdown(host, lab, caplog):
+    start_vms(host, "r1")
+    with caplog.at_level("INFO"):
+        stop_vms(host, "r1", timeout=5)
+    assert not lab.lookupByName("r1").isActive()
+    assert "STOPPED (forced" not in caplog.text
+
+
+def test_stop_forced_after_timeout(host, lab, caplog, monkeypatch):
+    from vlab.virt import api
+    monkeypatch.setattr(api, "_shutdown", lambda host, dom: None)  # guest ignores shutdown request
+    monkeypatch.setattr(api, "POLL", 0.01)
+    start_vms(host, "r1")
+    with caplog.at_level("INFO"):
+        stop_vms(host, "r1", timeout=0.05)
+    assert not lab.lookupByName("r1").isActive()
+    assert "STOPPED (forced after timeout)" in caplog.text
+
+
+def test_stop_force(host, lab, monkeypatch):
+    from vlab.virt import api
+    monkeypatch.setattr(api, "_shutdown", lambda host, dom: pytest.fail("no clean shutdown with force"))
+    start_vms(host, "r1", "r2")
+    stop_vms(host, "r1", "r2", force=True)
+    assert not lab.lookupByName("r1").isActive() and not lab.lookupByName("r2").isActive()
+
+
+def test_define_vm_udp_and_target(host, conn):
+    vm = VM("u1", interfaces=[
+        Interface("udp", "127.0.0.1:10002", local="127.0.0.1:10001", mac="c0:ff:ee:09:00:01"),
+        Interface("bridge", "br0", target="u1-p2", model="e1000"),
+    ])
+    define_vm(host, vm)
+    back = VM.from_xml(conn.lookupByName("u1").XMLDesc())
+    assert back.interfaces[0] == vm.interfaces[0]
+    assert (back.interfaces[1].target, back.interfaces[1].model) == ("u1-p2", "e1000")
