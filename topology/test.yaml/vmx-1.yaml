@@ -16,7 +16,7 @@ vars:
   root_password: "$6$vlabvlab$5dQUFdNoOCf9So8AVoZ6h0YNmeTTcxbnITrhfaOBSO99pynAJEjKpJ28VT/7YgsVTfAbezIj2GwQjEF.gAD3m."  # lab only: "vlab123"
   mgmt_address: 172.255.1.3/24
   interfaces:
-    - name: ge-0/0/0
+    ge-0/0/0:
       address: 192.168.1.3/24
-    - name: ge-0/0/1
+    ge-0/0/1:
       address: 192.168.2.3/24

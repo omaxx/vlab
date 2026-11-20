@@ -22,8 +22,8 @@ interfaces {
             }
         }
     }
-{%- for ifc in interfaces %}
-    {{ ifc.name }} {
+{%- for name, ifc in interfaces.items() %}
+    {{ name }} {
         unit 0 {
             family inet {
                 address {{ ifc.address }};
