@@ -9,7 +9,7 @@ from vlab.spec.jnpr import inject_config
 from vlab.utils import load_file
 from vlab.virt import DHCPHost, Disk, Interface, VNet
 
-from conftest import TOPOLOGY, FakeHost
+from conftest import TOPOLOGY, FakeHost, yaml_spec
 
 IMG = "/var/lib/vlab/images/junos/vmx/24.4R1-S2.9"
 
@@ -165,18 +165,18 @@ def test_inject_config_real_fat_image(tmp_path):
 
 @pytest.mark.parametrize("ext", ["yaml", "jsonnet"])
 def test_topology_vmx(ext):
-    d = load_device(str(TOPOLOGY / f"test.{ext}/vmx-1.{ext}"))
+    d = yaml_spec("vmx-1") if ext == "yaml" else load_device(str(TOPOLOGY / "test.jsonnet/vmx-1.jsonnet"))
     assert isinstance(d, VMX)
-    assert (d.name, d.id, d.mgmt.ip, len(d.ports), d.config) == ("vmx-1", 3, "172.255.1.3/24", 2, "vmx.conf.j2")
+    assert (d.name, d.id, d.mgmt.ip, len(d.ports), d.config) == ("vmx-1", 3, "172.255.1.3/24", 3, "vmx.conf.j2")
     cfg = d.rendered_config
     assert cfg is not None
-    for line in ("host-name vmx-1;", "address 172.255.1.3/24;", "ge-0/0/1 {", "address 192.168.2.3/24;", "lite-mode;"):
+    for line in ("host-name vmx-1;", "address 172.255.1.3/24;", "ge-0/0/1 {", "address 192.168.2.3/24;",
+                 "ge-0/0/2 {", "address 10.1.0.1/24;", "route 10.2.0.0/24 next-hop 192.168.1.5;", "lite-mode;"):
         assert line in cfg
-    assert "routing-options" not in cfg  # default_gateway not in vars
 
 
 def test_topology_vmx_yaml_equals_jsonnet():
-    y = load_device(str(TOPOLOGY / "test.yaml/vmx-1.yaml"))
+    y = yaml_spec("vmx-1")
     j = load_device(str(TOPOLOGY / "test.jsonnet/vmx-1.jsonnet"))
     assert y == j and y.rendered_config == j.rendered_config
 
@@ -224,7 +224,7 @@ def test_vqfx_prepare():
 
 
 def test_topology_vqfx():
-    d = Device.from_dict(load_file(str(TOPOLOGY / "test.yaml/vqfx-1.yaml")))
+    d = load_device(str(TOPOLOGY / "test.yaml/devices/vqfx-1.yaml"))
     assert isinstance(d, VQFX)
     assert (d.name, d.version, d.dhcp_leases()) == (
         "vqfx-1", "20.2", [("mgmt-1", DHCPHost("ca:ff:ee:04:10:00", "172.255.1.4", "vqfx-1"))]

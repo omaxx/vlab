@@ -194,3 +194,13 @@ def test_kw_only():
 def test_telnet_console_port():
     assert make().vms()[0].telnet_port == 6030  # id 3
     assert make(telnet=False).vms()[0].telnet_port is None
+
+
+def test_static_routes():
+    d = Linux(name="srv-1", id=1, user="u", ports=[
+        Port("mgmt-1", "172.255.1.1/24", gateway="172.255.1.254"),
+        Port("srv-1", "10.1.0.10/24", routes={"10.2.0.0/24": "10.1.0.1", "10.9.0.0/16": "10.1.0.2"}),
+    ])
+    eth = yaml.safe_load(d.network_config())["ethernets"]
+    assert eth["port1"]["routes"] == [{"to": "default", "via": "172.255.1.254"}]
+    assert eth["port2"]["routes"] == [{"to": "10.2.0.0/24", "via": "10.1.0.1"}, {"to": "10.9.0.0/16", "via": "10.1.0.2"}]

@@ -9,6 +9,13 @@ from vlab.host import Host
 TOPOLOGY = Path(__file__).parent.parent / "topology"
 
 
+def yaml_spec(name: str, kind: str = "devices"):
+    """Device or network spec by name from topology/test.yaml/topology.yaml."""
+    from vlab.spec import load_topology
+    topo = load_topology(str(TOPOLOGY / "test.yaml/topology.yaml"))
+    return {x.name: x for x in getattr(topo, kind)}[name]
+
+
 class FakeHost(Host):
     """Host that records commands instead of running them.
 

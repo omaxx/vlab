@@ -32,10 +32,12 @@ interfaces {
     }
 {%- endfor %}
 }
-{%- if default_gateway is defined %}
+{%- if static_routes is defined and static_routes %}
 routing-options {
     static {
-        route 0.0.0.0/0 next-hop {{ default_gateway }};
+{%- for prefix, next_hop in static_routes.items() %}
+        route {{ prefix }} next-hop {{ next_hop }};
+{%- endfor %}
     }
 }
 {%- endif %}

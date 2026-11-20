@@ -40,9 +40,9 @@ def test_deploy_existing_kept(host):
     assert (vnet.ip, vnet.devices) == (None, None)
 
 
-@pytest.mark.parametrize("ext", ["yaml", "jsonnet"])
-def test_topology_mgmt(ext):
-    n = Network.from_dict(load_file(str(TOPOLOGY / f"test.{ext}/mgmt-1.{ext}")))
+@pytest.mark.parametrize("path", ["test.yaml/networks/mgmt.yaml", "test.jsonnet/mgmt-1.net.jsonnet"])
+def test_topology_mgmt(path):
+    n = Network.from_dict(load_file(str(TOPOLOGY / path)))
     assert n == Network("mgmt-1", ip="172.255.1.254/24", forward="nat")
 
 

@@ -9,7 +9,7 @@ from rich.table import Table
 
 from . import spec, virt
 from .host import Host
-from .spec import Network, load_device
+from .spec import Network, load_device, load_topology
 from .utils import load_file
 
 LOG_LEVELS = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
@@ -32,20 +32,27 @@ SPEC_FILE = click.Path(exists=True, dir_okay=False)
 
 
 @main.command()
+@click.option("-t", "--topology", "topologies", multiple=True, type=SPEC_FILE, help="topology file (repeatable)")
 @click.option("-d", "--device", "devices", multiple=True, type=SPEC_FILE, help="device spec file (repeatable)")
 @click.option("-n", "--network", "networks", multiple=True, type=SPEC_FILE, help="network spec file (repeatable)")
 @click.option("--overwrite", is_flag=True, help="rewrite existing VM files instead of keeping them")
 @click.pass_obj
-def deploy(host: Host, devices: tuple[str, ...], networks: tuple[str, ...], overwrite: bool) -> None:
-    """Define networks, then devices (VNets + VMs) on host, not started. Spec: .yaml, .json or .jsonnet."""
-    if not (devices or networks):
-        raise click.UsageError("give -d DEVICE_FILE and/or -n NETWORK_FILE")
-    for path in networks:
-        network = Network.from_dict(load_file(path))
+def deploy(
+    host: Host, topologies: tuple[str, ...], devices: tuple[str, ...], networks: tuple[str, ...], overwrite: bool
+) -> None:
+    """Define networks, then devices (VNets + VMs) on host, not started. Spec: .yaml, .json or .jsonnet.
+
+    All specs are loaded first (fail before any change); then all networks (-t, -n), then all devices (-t, -d).
+    """
+    if not (topologies or devices or networks):
+        raise click.UsageError("give -t TOPOLOGY_FILE, -d DEVICE_FILE and/or -n NETWORK_FILE")
+    loaded = [load_topology(path) for path in topologies]
+    all_networks = [n for t in loaded for n in t.networks] + [Network.from_dict(load_file(p)) for p in networks]
+    all_devices = [d for t in loaded for d in t.devices] + [load_device(p) for p in devices]
+    for network in all_networks:
         network.deploy(host)
         click.echo(f"network {network.name} deployed")
-    for path in devices:
-        device = load_device(path)
+    for device in all_devices:
         device.deploy(host, overwrite=overwrite)
         click.echo(f"device {device.name} deployed")
 

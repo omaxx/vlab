@@ -86,8 +86,10 @@ class Linux(Device):
             eth: dict[str, Any] = {"match": {"macaddress": self.mac(n)}}
             if p.ip:
                 eth["addresses"] = [p.ip]
-            if p.gateway:
-                eth["routes"] = [{"to": "default", "via": p.gateway}]
+            routes = [{"to": "default", "via": p.gateway}] if p.gateway else []
+            routes += [{"to": to, "via": via} for to, via in p.routes.items()]
+            if routes:
+                eth["routes"] = routes
             if p.dns:
                 eth["nameservers"] = {"addresses": p.dns}
             ethernets[f"port{n}"] = eth

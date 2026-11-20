@@ -18,7 +18,7 @@ uv sync
 
 ## Specs
 
-`topology/test.yaml/mgmt-1.yaml` — NAT network, host IP = VM gateway/DNS:
+`topology/test.yaml/networks/mgmt.yaml` — NAT network, host IP = VM gateway/DNS:
 
 ```yaml
 name: mgmt-1
@@ -31,12 +31,12 @@ forward: nat
 
 `forward: bridge` + `bridge: br0` wraps an existing host bridge as a network (no ip/dhcp/mtu).
 
-`topology/test.yaml/vm-1.yaml` — Linux cloud image VM (image in `/var/lib/vlab/images/linux/`), configured by cloud-init:
+Linux cloud image VM (image in `/var/lib/vlab/images/linux/`), configured by cloud-init:
 
 ```yaml
 type: linux               # device type, required
-name: vm-01
-id: 1                     # MACs ca:ff:ee:01:00:<port>, host ifnames vm-01-<port>
+name: srv-1
+id: 1                     # MACs ca:ff:ee:01:00:<port>, host ifnames srv-1-<port>
 user: $USER
 ssh_key_files:
   - ~/.ssh/id_ed25519.pub
@@ -45,7 +45,7 @@ ports:
     ip: 172.255.1.1/24
     gateway: 172.255.1.254
     dns: [172.255.1.254]
-    dhcp: true            # fixed DHCP lease + DNS name "vm-01" in mgmt-1 (live, no restart)
+    dhcp: true            # fixed DHCP lease + DNS name "srv-1" in mgmt-1 (live, no restart)
   - network: p2p-1
     ip: 192.168.1.1/24
   - bridge: br0           # host bridge instead of libvirt network
@@ -57,29 +57,46 @@ ports:
 
 cloud-init installs `qemu-guest-agent`: clean shutdown and `virsh domifaddr <vm> --source agent`.
 
+A topology file puts devices and networks together, keyed by name
+(`topology/test.yaml/topology.yaml`: `[srv-1] -- srv-1 -- [vmx-1] -- p2p-1/p2p-2 -- [vmx-2] -- srv-2 -- [srv-2]`):
+
+```yaml
+devices:
+  srv-1:                  # name from key
+    type: linux
+    ...
+  vmx-1:
+    type: jnpr/vmx        # Juniper vMX (RE + FPC VMs); also jnpr/vqfx
+    config: vmx.conf.j2   # Jinja2 template in configs/, rendered with vars
+    vars: {...}
+networks:
+  srv-1:
+    devices: [srv-1, vmx-1]
+```
+
 Jsonnet keeps repeated devices short (`topology/test.jsonnet/`):
 
 ```jsonnet
-(import 'linux.libsonnet').linux(2)   // vm-02, IPs .2
+(import 'linux.libsonnet').srv(2)   // srv-2, IPs .2
 ```
 
 ## Usage
 
 ```shell
-# define networks, then devices (not started)
-uv run vlab -v deploy -n topology/test.yaml/mgmt-1.yaml -d topology/test.yaml/vm-1.yaml
+# define networks, then devices (not started); -t topology, -n network, -d device (repeatable)
+uv run vlab -v deploy -n topology/test.yaml/networks/mgmt.yaml -t topology/test.yaml/topology.yaml
 
 # start / stop by device, VM name or --all
 # stop = clean shutdown, power off after --timeout (60s); --force = power off right away
 uv run vlab -v start --all
-uv run vlab -v stop -d vm-01
+uv run vlab -v stop -d vmx-1
 
 # show VMs / VNets (running in green)
 uv run vlab list vms
 uv run vlab list vnets
 
 # delete VMs; VM files removed unless --keep-files
-uv run vlab -v delete -d vm-01
+uv run vlab -v delete -d srv-1
 ```
 
 `-v` info, `-vv` debug (incl. generated XML). `deploy --overwrite` rebuilds existing VM files.

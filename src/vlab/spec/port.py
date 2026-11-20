@@ -9,13 +9,14 @@ from ..virt.vm import NicModel, NicType
 class Port:
     """NIC: exactly one of network (libvirt network), bridge (host bridge), udp (remote "addr:port" + local).
 
-    ip/gateway/dns: guest config, used by device types that configure the guest (e.g. Linux via cloud-init).
+    ip/gateway/routes/dns: guest config, used by device types that configure the guest (e.g. Linux via cloud-init).
     dhcp: fixed DHCP lease for ip (+ DNS name) in the network, registered on deploy.
     """
 
     network: str | None = None
     ip: str | None = None  # with prefix, e.g. "172.255.1.1/24"
     gateway: str | None = None
+    routes: dict[str, str] = field(default_factory=dict)  # static routes: prefix -> next hop
     dns: list[str] = field(default_factory=list)
     bridge: str | None = None
     udp: str | None = None  # remote "addr:port"

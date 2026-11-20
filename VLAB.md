@@ -254,18 +254,18 @@ Spec → libvirt: Device → 1+ VMs + internal VNets, Network → VNet. Tagged i
 Only VNets with vlab metadata are started/stopped (stopped when no running VM uses them); others are never touched.
 
 ```shell
-# deploy networks (-n) then devices (-d), repeatable, not started; existing VNets kept, VM files kept unless --overwrite
-uv run vlab -v deploy -n topology/test.yaml/mgmt-1.yaml
-uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml -d topology/test.jsonnet/vm-2.jsonnet
-uv run vlab -v deploy -d topology/test.yaml/vm-1.yaml --overwrite
+# deploy topologies (-t), networks (-n), devices (-d), repeatable: all networks first, not started; existing VNets kept, VM files kept unless --overwrite
+uv run vlab -v deploy -n topology/test.yaml/networks/mgmt.yaml -t topology/test.yaml/topology.yaml
+uv run vlab -v deploy -d topology/test.yaml/devices/vqfx-1.yaml
+uv run vlab -v deploy -d topology/test.jsonnet/srv-1.jsonnet --overwrite
 
 # start / stop: VM names, -d DEVICE (repeatable) or --all (VMs with vlab metadata)
 # stop: clean shutdown (guest agent / ACPI), power off after --timeout 60; --force: power off now
 uv run vlab -v start --all
-uv run vlab -v stop -d vm-01
+uv run vlab -v stop -d vmx-1
 
 # delete VMs (+ UEFI NVRAM); VM folders removed unless --keep-files
-uv run vlab -v delete -d vm-02 --keep-files
+uv run vlab -v delete -d srv-2 --keep-files
 
 # show (running = green, VNet devices "-" = not managed by vlab); -vv = debug incl. XML
 uv run vlab list vms
