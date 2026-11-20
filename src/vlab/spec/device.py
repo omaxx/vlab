@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import logging
+from pathlib import Path
 from typing import ClassVar
 
 from mashumaro import DataClassDictMixin
@@ -7,6 +8,7 @@ from mashumaro.config import BaseConfig
 from mashumaro.types import Discriminator
 
 from ..host import Host
+from ..utils import load_file
 from ..virt import VM, DHCPHost, VNet, define_vm, delete_vms, set_dhcp_host, start_vms, stop_vms
 from .network import define_missing_vnets
 
@@ -32,6 +34,9 @@ class Device(DataClassDictMixin):
     def telnet_port(self, n: int) -> int | None:
         """Console port of the device's VM n (0-9): 6000 + id*10 + n, None if telnet is off."""
         return 6000 + self.id * 10 + n if self.telnet else None
+
+    def resolve(self, spec_dir: str) -> None:
+        """Resolve files relative to the spec file (e.g. config templates); called by load_device()."""
 
     def images_dir(self, host: Host) -> str:
         """Base images of this device type: <host.images_dir>/<type>."""
@@ -71,6 +76,13 @@ class Device(DataClassDictMixin):
 
     def vm_names(self) -> list[str]:
         return [vm.name for vm in self.vms()]
+
+
+def load_device(path: str) -> Device:
+    """Device spec file (.yaml/.json/.jsonnet) -> Device subclass by `type:`, spec-relative files resolved."""
+    device = Device.from_dict(load_file(path))
+    device.resolve(str(Path(path).resolve().parent))
+    return device
 
 
 def delete(host: Host, *vm_names: str, keep_files: bool = False) -> None:

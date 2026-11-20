@@ -4,7 +4,7 @@ import subprocess
 import pytest
 
 from vlab.host import Host
-from vlab.spec import VMX, VQFX, Device, Port
+from vlab.spec import VMX, VQFX, Device, Port, load_device
 from vlab.spec.jnpr import inject_config
 from vlab.utils import load_file
 from vlab.virt import DHCPHost, Disk, Interface, VNet
@@ -99,25 +99,46 @@ def test_prepare_no_config():
     assert host.commands() == files_commands(cfg=False)
 
 
-def test_prepare_with_config_file():
-    host = FakeHost(files={"/cfg/vmx.conf": "system { host-name vmx-1; }\n"})
-    make(config_file="/cfg/vmx.conf").prepare(host, overwrite=False)
-    cmds = [c for c in host.commands() if c[0] not in ("mcopy", "tar", "tee", "rm") and c != ("mkdir", "-p", "/tree/config")]
-    assert host.commands()[0] == ("cat", "/cfg/vmx.conf")  # read before any change
-    assert [c for c in cmds if c[0] != "cat" and not c[-1].endswith("/tree/config")] == files_commands(cfg=True)
-    written = [inp for cmd, inp in host.calls if cmd[0] == "tee"]
-    assert written == ["system { host-name vmx-1; }\n"]
+def test_prepare_with_rendered_config():
+    host = FakeHost()
+    d = make(config="vmx.conf.j2")
+    d.rendered_config = "system { host-name vmx-1; }\n"
+    d.prepare(host, overwrite=False)
+    cmds = [c for c in host.commands() if c[0] not in ("mcopy", "tar", "tee", "rm") and not c[-1].endswith("/tree/config")]
+    assert cmds == files_commands(cfg=True)
+    assert [inp for cmd, inp in host.calls if cmd[0] == "tee"] == ["system { host-name vmx-1; }\n"]
 
 
-def test_prepare_existing_kept():
-    host = FakeHost(existing={"/var/lib/vlab/vms/vmx-1~re0", "/var/lib/vlab/vms/vmx-1~fpc0"})
-    make().prepare(host, overwrite=False)
-    assert host.commands() == [("test", "-e", "/var/lib/vlab/vms/vmx-1~re0"), ("test", "-e", "/var/lib/vlab/vms/vmx-1~fpc0")]
+def test_prepare_requires_rendered_config():
+    with pytest.raises(ValueError, match="not rendered"):
+        make(config="vmx.conf.j2").prepare(FakeHost(), overwrite=False)
 
 
-def test_config_and_config_file_exclusive():
-    with pytest.raises(ValueError, match="not both"):
-        make(config="x", config_file="/y").prepare(FakeHost(), overwrite=False)
+def test_render_template(tmp_path):
+    (tmp_path / "configs").mkdir()
+    (tmp_path / "configs/t.j2").write_text("host-name {{ device.name }};\n{% for i in ifs %}{{ i }};\n{% endfor %}")
+    d = make(config="t.j2", vars={"ifs": ["ge-0/0/0", "ge-0/0/1"]})
+    d.resolve(str(tmp_path))
+    assert d.rendered_config == "host-name vmx-1;\nge-0/0/0;\nge-0/0/1;\n"
+    abs_tpl = tmp_path / "abs.j2"
+    abs_tpl.write_text("{{ x }}")
+    d = make(config=str(abs_tpl), vars={"x": "abs"})
+    d.resolve("/nonexistent")  # absolute path: spec dir not used
+    assert d.rendered_config == "abs"
+
+
+def test_render_undefined_var_fails(tmp_path):
+    import jinja2
+    (tmp_path / "configs").mkdir()
+    (tmp_path / "configs/t.j2").write_text("{{ missing }}")
+    with pytest.raises(jinja2.UndefinedError, match="missing"):
+        make(config="t.j2").resolve(str(tmp_path))
+
+
+def test_no_config_no_render(tmp_path):
+    d = make()
+    d.resolve(str(tmp_path))
+    assert d.rendered_config is None
 
 
 @pytest.mark.skipif(not (shutil.which("mformat") and shutil.which("mcopy")), reason="mtools not installed")
@@ -142,11 +163,22 @@ def test_inject_config_real_fat_image(tmp_path):
     assert conf == "system { host-name vmx-1; }\n"
 
 
-def test_topology_vmx():
-    d = Device.from_dict(load_file(str(TOPOLOGY / "test.yaml/vmx-1.yaml")))
+@pytest.mark.parametrize("ext", ["yaml", "jsonnet"])
+def test_topology_vmx(ext):
+    d = load_device(str(TOPOLOGY / f"test.{ext}/vmx-1.{ext}"))
     assert isinstance(d, VMX)
-    assert (d.name, d.id, d.mgmt.ip, len(d.ports)) == ("vmx-1", 3, "172.255.1.3/24", 2)
-    assert d.config is not None and "host-name vmx-1;" in d.config
+    assert (d.name, d.id, d.mgmt.ip, len(d.ports), d.config) == ("vmx-1", 3, "172.255.1.3/24", 2, "vmx.conf.j2")
+    cfg = d.rendered_config
+    assert cfg is not None
+    for line in ("host-name vmx-1;", "address 172.255.1.3/24;", "ge-0/0/1 {", "address 192.168.2.3/24;", "lite-mode;"):
+        assert line in cfg
+    assert "routing-options" not in cfg  # default_gateway not in vars
+
+
+def test_topology_vmx_yaml_equals_jsonnet():
+    y = load_device(str(TOPOLOGY / "test.yaml/vmx-1.yaml"))
+    j = load_device(str(TOPOLOGY / "test.jsonnet/vmx-1.jsonnet"))
+    assert y == j and y.rendered_config == j.rendered_config
 
 
 def make_vqfx(name: str = "vqfx-1", **kw) -> VQFX:

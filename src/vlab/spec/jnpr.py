@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
 import logging
-from typing import ClassVar
+from pathlib import Path
+from typing import Any, ClassVar
+
+import jinja2
 
 from ..host import Host
 from ..virt import VM, DHCPHost, Disk, Interface, SysInfo, VNet
@@ -96,7 +99,8 @@ class VMX(Junos):
 
     RE NICs: fxp0 mgmt :00, int :01. FPC NICs: mgmt :0a, int :0b, fab :0c, then ge-0/0/i.
     RE SMBIOS as in Juniper's vRE template (product VM-<name>-161-re-<slot>).
-    config: juniper.conf text (or config_file on host) put into the RE metadata image, loaded at first boot.
+    config: Jinja2 template of juniper.conf (name in <spec dir>/configs/ or absolute path), rendered with
+    `vars` (+ `device` = this spec) by resolve(); result put into the RE metadata image, loaded at first boot.
     """
 
     type: ClassVar[str] = "jnpr/vmx"
@@ -105,8 +109,9 @@ class VMX(Junos):
     fpc_memory: int = 2048
     fpc_vcpus: int = 3
     double_re: bool = False
-    config: str | None = None
-    config_file: str | None = None  # path on host (~ allowed)
+    config: str | None = None  # juniper.conf Jinja2 template
+    vars: dict[str, Any] = field(default_factory=dict)  # template variables
+    rendered_config: str | None = field(default=None, init=False, repr=False, compare=False)
 
     @property
     def re_slots(self) -> list[int]:
@@ -164,13 +169,14 @@ class VMX(Junos):
         )
         return res
 
-    def config_text(self, host: Host) -> str | None:
-        if self.config is not None and self.config_file is not None:
-            raise ValueError(f"{self.name}: give config or config_file, not both")
-        return host.read(self.config_file) if self.config_file is not None else self.config
+    def resolve(self, spec_dir: str) -> None:
+        if self.config is not None:
+            self.rendered_config = render_template(self.config, spec_dir, device=self, **self.vars)
 
     def prepare(self, host: Host, overwrite: bool) -> None:
-        config = self.config_text(host)  # read first: fail before changing anything
+        if self.config is not None and self.rendered_config is None:
+            raise ValueError(f"{self.name}: config template not rendered (load spec with load_device)")
+        config = self.rendered_config
         img = self.images_dir(host)
         for slot in self.re_slots:
             d = host.vm_dir(self.re_name(slot))
@@ -245,6 +251,18 @@ class VQFX(Junos):
         if self.fresh_dir(host, d, overwrite):
             host.cow(f"{img}/{self.fpc_image}", f"{d}/pfe.qcow2")
             logger.info("%s: VM `%s`: files created", host, self.fpc_name)
+
+
+def render_template(template: str, spec_dir: str, **context: Any) -> str:
+    """Render Jinja2 template (name in <spec_dir>/configs/ or absolute path); undefined variables are errors."""
+    path = Path(template) if Path(template).is_absolute() else Path(spec_dir) / "configs" / template
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(path.parent),
+        undefined=jinja2.StrictUndefined,
+        keep_trailing_newline=True,
+        autoescape=False,
+    )
+    return env.get_template(path.name).render(**context)
 
 
 def inject_config(host: Host, image: str, config: str) -> None:

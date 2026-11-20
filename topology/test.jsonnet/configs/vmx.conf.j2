@@ -1,0 +1,41 @@
+system {
+    host-name {{ device.name }};
+    root-authentication {
+        encrypted-password "{{ root_password }}";
+    }
+    services {
+        ssh {
+            root-login allow;
+        }
+    }
+}
+chassis {
+    fpc 0 {
+        lite-mode;
+    }
+}
+interfaces {
+    fxp0 {
+        unit 0 {
+            family inet {
+                address {{ mgmt_address }};
+            }
+        }
+    }
+{%- for ifc in interfaces %}
+    {{ ifc.name }} {
+        unit 0 {
+            family inet {
+                address {{ ifc.address }};
+            }
+        }
+    }
+{%- endfor %}
+}
+{%- if default_gateway is defined %}
+routing-options {
+    static {
+        route 0.0.0.0/0 next-hop {{ default_gateway }};
+    }
+}
+{%- endif %}

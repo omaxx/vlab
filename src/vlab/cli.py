@@ -9,7 +9,7 @@ from rich.table import Table
 
 from . import spec, virt
 from .host import Host
-from .spec import Device, Network
+from .spec import Network, load_device
 from .utils import load_file
 
 LOG_LEVELS = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
@@ -45,7 +45,7 @@ def deploy(host: Host, devices: tuple[str, ...], networks: tuple[str, ...], over
         network.deploy(host)
         click.echo(f"network {network.name} deployed")
     for path in devices:
-        device = Device.from_dict(load_file(path))
+        device = load_device(path)
         device.deploy(host, overwrite=overwrite)
         click.echo(f"device {device.name} deployed")
 
