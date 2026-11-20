@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 import logging
+from typing import ClassVar
 
 from mashumaro import DataClassDictMixin
+from mashumaro.config import BaseConfig
+from mashumaro.types import Discriminator
 
 from ..host import Host
 from ..virt import VM, DHCPHost, VNet, define_vm, delete_vms, set_dhcp_host, start_vms, stop_vms
@@ -10,14 +13,23 @@ from .network import define_missing_vnets
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Device(DataClassDictMixin):
     """Lab device: one or more VMs plus internal VNets. Each device type decides how its VMs are named.
 
     Every VM carries device=name and every internal VNet devices=[name] as libvirt metadata.
+    Subclasses set `type`; Device.from_dict picks the subclass by the spec's `type:` field (required).
     """
 
+    type: ClassVar[str]
     name: str
+
+    class Config(BaseConfig):
+        discriminator = Discriminator(field="type", include_subtypes=True)
+
+    def images_dir(self, host: Host) -> str:
+        """Base images of this device type: <host.images_dir>/<type>."""
+        return f"{host.images_dir}/{self.type}"
 
     def vms(self) -> list[VM]:
         raise NotImplementedError

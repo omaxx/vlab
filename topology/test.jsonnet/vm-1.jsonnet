@@ -1,1 +1,1 @@
-(import 'debian.libsonnet').debian(1)
+(import 'linux.libsonnet').linux(1)

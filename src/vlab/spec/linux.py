@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import json
 import logging
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from ..host import Host
 from ..virt import VM, DHCPHost, Disk, Interface
@@ -22,27 +22,33 @@ class Port:
     bridge: str | None = None
     udp: str | None = None  # remote "addr:port"
     local: str | None = None  # own "addr:port" for udp
-    target: str | None = None  # host-side interface name (network/bridge), e.g. "vm01-p1"
+    target: str | None = None  # host-side interface name (network/bridge); default "<device>-<N>" if <= 15 chars
     model: NicModel = "virtio"
     dhcp: bool = False  # register fixed DHCP lease (ip, device name for DNS) in network on deploy
 
-    def interface(self, mac: str) -> Interface:
+    def interface(self, mac: str, default_target: str) -> Interface:
         sources = {"network": self.network, "bridge": self.bridge, "udp": self.udp}
         given = [(t, s) for t, s in sources.items() if s is not None]
         if len(given) != 1:
             raise ValueError("Port needs exactly one of network, bridge or udp")
         type_, source = given[0]
-        return Interface(cast(NicType, type_), source, target=self.target, local=self.local, mac=mac, model=self.model)
+        target = self.target
+        if target is None and type_ != "udp" and len(default_target) <= 15:  # Linux ifname limit
+            target = default_target
+        return Interface(cast(NicType, type_), source, target=target, local=self.local, mac=mac, model=self.model)
 
 
-@dataclass
-class Debian(Device):
-    """Plain Debian cloud image device: one VM named like the device, qcow2 overlay on base image + cloud-init seed.
+@dataclass(kw_only=True)
+class Linux(Device):
+    """Linux cloud image device (Debian, Ubuntu, ... with cloud-init): one VM named like the device,
+    qcow2 overlay on base image + cloud-init seed.
 
-    MAC of port N (1-based): c0:ff:ee:<id>:00:<N>, id as 2 decimal digits.
+    Port N (1-based): MAC ca:ff:ee:<id>:00:<N> (id as 2 decimal digits, locally administered),
+    host interface <device>-<N>.
     cloud-init installs and starts qemu-guest-agent (needs package mirror access, e.g. via NAT mgmt network).
     """
 
+    type: ClassVar[str] = "linux"
     id: int  # 1-99
     user: str  # $VAR allowed, e.g. $USER: taken from host env at deploy
     ssh_keys: list[str] = field(default_factory=list)
@@ -50,10 +56,10 @@ class Debian(Device):
     ports: list[Port] = field(default_factory=list)
     vcpus: int = 1
     memory: int = 4096  # MiB
-    image: str = "debian-13-genericcloud-amd64.qcow2"  # in host.images_dir
+    image: str = "debian-13-genericcloud-amd64.qcow2"  # in images_dir(host): <host.images_dir>/linux
 
     def mac(self, n: int) -> str:
-        return f"c0:ff:ee:{self.id:02d}:00:{n:02d}"
+        return f"ca:ff:ee:{self.id:02d}:00:{n:02d}"
 
     def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:
         leases = []
@@ -76,7 +82,7 @@ class Debian(Device):
                     Disk(f"{self.name}.qcow2", "vda"),
                     Disk("seed.iso", "sda", format="raw", bus="sata", device="cdrom"),
                 ],
-                interfaces=[p.interface(self.mac(n)) for n, p in enumerate(self.ports, 1)],
+                interfaces=[p.interface(self.mac(n), f"{self.name}-{n}") for n, p in enumerate(self.ports, 1)],
             )
         ]
 
@@ -131,7 +137,7 @@ class Debian(Device):
         if exists:
             host.rm(d)
         host.mkdir(d)
-        host.cow(f"{host.images_dir}/{self.image}", f"{d}/{self.name}.qcow2")
+        host.cow(f"{self.images_dir(host)}/{self.image}", f"{d}/{self.name}.qcow2")
         host.write(f"{d}/meta-data", self.meta_data())
         host.write(f"{d}/user-data", self.user_data(user, ssh_keys))
         host.write(f"{d}/network-config", self.network_config())

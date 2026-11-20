@@ -1,5 +1,5 @@
-from .debian import Debian, Port
+from .linux import Linux, Port
 from .device import Device, delete
 from .network import Network
 
-__all__ = ["Debian", "Port", "Device", "Network", "delete"]
+__all__ = ["Linux", "Port", "Device", "Network", "delete"]

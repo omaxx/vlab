@@ -3,7 +3,7 @@ import json
 import pytest
 import yaml
 
-from vlab.spec import Debian, Port
+from vlab.spec import Linux, Port
 from vlab.virt import DHCPHost, Disk, Interface
 
 from conftest import FakeHost
@@ -11,8 +11,8 @@ from conftest import FakeHost
 VM_DIR = "/var/lib/vlab/vms/r3"
 
 
-def make(**kw) -> Debian:
-    return Debian(
+def make(**kw) -> Linux:
+    return Linux(
         name="r3",
         id=3,
         user="$USER",
@@ -26,17 +26,17 @@ def make(**kw) -> Debian:
 
 
 def test_mac():
-    assert make().mac(1) == "c0:ff:ee:03:00:01"
-    assert Debian(name="x", id=12, user="u").mac(3) == "c0:ff:ee:12:00:03"
+    assert make().mac(1) == "ca:ff:ee:03:00:01"
+    assert Linux(name="x", id=12, user="u").mac(3) == "ca:ff:ee:12:00:03"
 
 
 def test_one_vm_named_like_node():
     (vm,) = make(vcpus=2, memory=2048).vms()
     assert (vm.name, vm.device, vm.vcpus, vm.memory) == ("r3", "r3", 2, 2048)
     assert [(i.type, i.source, i.mac) for i in vm.interfaces] == [
-        ("network", "mgmt-1", "c0:ff:ee:03:00:01"),
-        ("network", "p2p-1", "c0:ff:ee:03:00:02"),
-        ("bridge", "br0", "c0:ff:ee:03:00:03"),
+        ("network", "mgmt-1", "ca:ff:ee:03:00:01"),
+        ("network", "p2p-1", "ca:ff:ee:03:00:02"),
+        ("bridge", "br0", "ca:ff:ee:03:00:03"),
     ]
     assert vm.disks == [
         Disk("r3.qcow2", "vda"),
@@ -46,21 +46,21 @@ def test_one_vm_named_like_node():
 
 
 def test_port_nic_options():
-    d = Debian(name="r4", id=4, user="u", ports=[
+    d = Linux(name="r4", id=4, user="u", ports=[
         Port(network="mgmt-1", target="r4-p1", model="e1000"),
         Port(udp="127.0.0.1:10002", local="127.0.0.1:10001"),
     ])
     (vm,) = d.vms()
     assert vm.interfaces == [
-        Interface("network", "mgmt-1", target="r4-p1", mac="c0:ff:ee:04:00:01", model="e1000"),
-        Interface("udp", "127.0.0.1:10002", local="127.0.0.1:10001", mac="c0:ff:ee:04:00:02"),
+        Interface("network", "mgmt-1", target="r4-p1", mac="ca:ff:ee:04:00:01", model="e1000"),
+        Interface("udp", "127.0.0.1:10002", local="127.0.0.1:10001", mac="ca:ff:ee:04:00:02"),
     ]
 
 
 @pytest.mark.parametrize("port", [Port(), Port(network="a", bridge="b"), Port(bridge="b", udp="1.2.3.4:5")])
 def test_port_needs_exactly_one_source(port):
     with pytest.raises(ValueError, match="exactly one"):
-        Debian(name="x", id=1, user="u", ports=[port]).vms()
+        Linux(name="x", id=1, user="u", ports=[port]).vms()
 
 
 def test_meta_data_is_yaml():
@@ -82,13 +82,13 @@ def test_user_data():
 def test_network_config():
     eth = yaml.safe_load(make().network_config())["ethernets"]
     assert eth["port1"] == {
-        "match": {"macaddress": "c0:ff:ee:03:00:01"},
+        "match": {"macaddress": "ca:ff:ee:03:00:01"},
         "addresses": ["172.255.1.3/24"],
         "routes": [{"to": "default", "via": "172.255.1.254"}],
         "nameservers": {"addresses": ["172.255.1.254"]},
     }
-    assert eth["port2"] == {"match": {"macaddress": "c0:ff:ee:03:00:02"}, "addresses": ["192.168.1.3/24"]}
-    assert eth["port3"] == {"match": {"macaddress": "c0:ff:ee:03:00:03"}}
+    assert eth["port2"] == {"match": {"macaddress": "ca:ff:ee:03:00:02"}, "addresses": ["192.168.1.3/24"]}
+    assert eth["port3"] == {"match": {"macaddress": "ca:ff:ee:03:00:03"}}
 
 
 def test_all_ssh_keys():
@@ -99,7 +99,7 @@ def test_all_ssh_keys():
 
 NEW_FILES = [
     ("qemu-img", "create", "-f", "qcow2", "-F", "qcow2",
-     "-b", "/var/lib/vlab/images/debian-13-genericcloud-amd64.qcow2", f"{VM_DIR}/r3.qcow2"),
+     "-b", "/var/lib/vlab/images/linux/debian-13-genericcloud-amd64.qcow2", f"{VM_DIR}/r3.qcow2"),
     ("tee", f"{VM_DIR}/meta-data"),
     ("tee", f"{VM_DIR}/user-data"),
     ("tee", f"{VM_DIR}/network-config"),
@@ -144,26 +144,48 @@ def test_prepare_unset_var_fails_before_changes():
 
 def test_literal_user():
     host = FakeHost()
-    Debian(name="r3", id=3, user="bob").prepare(host, overwrite=False)
+    Linux(name="r3", id=3, user="bob").prepare(host, overwrite=False)
     assert ("printenv", "USER") not in host.commands()
 
 
 def test_from_dict():
-    d = Debian.from_dict({"name": "r5", "id": 5, "user": "u", "ports": [{"network": "mgmt-1"}, {"bridge": "br0"}]})
+    d = Linux.from_dict({"name": "r5", "id": 5, "user": "u", "ports": [{"network": "mgmt-1"}, {"bridge": "br0"}]})
     assert d.ports == [Port("mgmt-1"), Port(bridge="br0")]
     assert (d.vcpus, d.memory, d.image) == (1, 4096, "debian-13-genericcloud-amd64.qcow2")
     assert json.loads(d.meta_data())["instance-id"] == "r5"
 
 
 def test_dhcp_leases():
-    d = Debian(name="r5", id=5, user="u", ports=[
+    d = Linux(name="r5", id=5, user="u", ports=[
         Port("mgmt-1", "172.255.1.5/24", dhcp=True),
         Port("p2p-1", "192.168.1.5/24"),
     ])
-    assert d.dhcp_leases() == [("mgmt-1", DHCPHost("c0:ff:ee:05:00:01", "172.255.1.5", "r5"))]
+    assert d.dhcp_leases() == [("mgmt-1", DHCPHost("ca:ff:ee:05:00:01", "172.255.1.5", "r5"))]
 
 
 @pytest.mark.parametrize("port", [Port("mgmt-1", dhcp=True), Port(bridge="br0", ip="10.0.0.1/24", dhcp=True)])
 def test_dhcp_lease_needs_network_and_ip(port):
     with pytest.raises(ValueError, match="dhcp needs network and ip"):
-        Debian(name="r5", id=5, user="u", ports=[port]).dhcp_leases()
+        Linux(name="r5", id=5, user="u", ports=[port]).dhcp_leases()
+
+
+def test_default_host_ifnames():
+    d = Linux(name="vm-01", id=1, user="u", ports=[
+        Port("mgmt-1"), Port(bridge="br0", target="custom"), Port(udp="1.1.1.1:2", local="1.1.1.1:1"),
+    ])
+    assert [i.target for i in d.vms()[0].interfaces] == ["vm-01-1", "custom", None]  # udp has no host ifname
+
+
+def test_long_name_no_default_ifname():
+    d = Linux(name="a-very-long-vm", id=1, user="u", ports=[Port("mgmt-1")])  # "a-very-long-vm-1" = 16 chars
+    assert d.vms()[0].interfaces[0].target is None  # libvirt picks vnetN
+
+
+def test_images_dir_per_type():
+    from vlab.host import Host
+    assert make().images_dir(Host()) == "/var/lib/vlab/images/linux"
+
+
+def test_kw_only():
+    with pytest.raises(TypeError):
+        Linux("r3", 3, "u")  # type: ignore[misc]

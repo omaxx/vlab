@@ -3,7 +3,7 @@
 Virtual lab on libvirt/QEMU. Lab specs (YAML, JSON or Jsonnet) are deployed to a host:
 
 - **Network** spec → one libvirt network (VNet)
-- **Device** spec (e.g. `Debian`) → one or more VMs + internal VNets
+- **Device** spec (`type: linux`, ...) → one or more VMs + internal VNets
 
 vlab tags what it creates with libvirt `<metadata>` and only starts/stops VNets it manages:
 a managed VNet starts with its first VM and stops when no running VM uses it.
@@ -31,11 +31,12 @@ forward: nat
 
 `forward: bridge` + `bridge: br0` wraps an existing host bridge as a network (no ip/dhcp/mtu).
 
-`topology/test.yaml/vm-1.yaml` — Debian cloud image VM, configured by cloud-init:
+`topology/test.yaml/vm-1.yaml` — Linux cloud image VM (image in `/var/lib/vlab/images/linux/`), configured by cloud-init:
 
 ```yaml
+type: linux               # device type, required
 name: vm-01
-id: 1                     # MACs c0:ff:ee:01:00:<port>
+id: 1                     # MACs ca:ff:ee:01:00:<port>, host ifnames vm-01-<port>
 user: $USER
 ssh_key_files:
   - ~/.ssh/id_ed25519.pub
@@ -59,7 +60,7 @@ cloud-init installs `qemu-guest-agent`: clean shutdown and `virsh domifaddr <vm>
 Jsonnet keeps repeated devices short (`topology/test.jsonnet/`):
 
 ```jsonnet
-(import 'debian.libsonnet').debian(2)   // vm-02, IPs .2
+(import 'linux.libsonnet').linux(2)   // vm-02, IPs .2
 ```
 
 ## Usage

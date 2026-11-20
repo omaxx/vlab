@@ -1,6 +1,7 @@
-// Debian VM on mgmt-1 (NAT) + p2p-1 + p2p-2, IPs end with id
+// Linux (Debian cloud image) VM on mgmt-1 (NAT) + p2p-1 + p2p-2, IPs end with id
 {
-  debian(id):: {
+  linux(id):: {
+    type: 'linux',
     name: 'vm-%02d' % id,
     id: id,
     user: '$USER',

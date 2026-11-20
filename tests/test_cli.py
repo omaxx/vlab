@@ -5,7 +5,7 @@ import pytest
 
 from vlab import cli, spec, virt
 from vlab.host import Host
-from vlab.spec import Debian, Network
+from vlab.spec import Linux, Network
 from vlab.virt import VM
 
 from conftest import TOPOLOGY
@@ -30,7 +30,7 @@ def recorded(monkeypatch):
 @pytest.mark.parametrize("overwrite", [False, True])
 def test_deploy(monkeypatch, overwrite):
     deployed = []
-    monkeypatch.setattr(Debian, "deploy", lambda self, host, overwrite: deployed.append((self.name, host, overwrite)))
+    monkeypatch.setattr(Linux, "deploy", lambda self, host, overwrite: deployed.append((self.name, host, overwrite)))
     args = ["deploy", "-d", str(TOPOLOGY / "test.yaml/vm-1.yaml")] + (["--overwrite"] if overwrite else [])
     r = invoke(*args)
     assert r.exit_code == 0, r.output
@@ -40,7 +40,7 @@ def test_deploy(monkeypatch, overwrite):
 
 def test_deploy_networks_before_devices(monkeypatch):
     order = []
-    monkeypatch.setattr(Debian, "deploy", lambda self, host, overwrite: order.append(self.name))
+    monkeypatch.setattr(Linux, "deploy", lambda self, host, overwrite: order.append(self.name))
     monkeypatch.setattr(Network, "deploy", lambda self, host: order.append(self.name))
     r = invoke(
         "deploy",

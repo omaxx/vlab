@@ -95,8 +95,9 @@ wget -N -P ~/downloads https://cloud.debian.org/images/cloud/trixie/latest/SHA51
 grep ' debian-13-genericcloud-amd64.qcow2$' ~/downloads/SHA512SUMS | sed "s|  |  $HOME/downloads/|" | sha512sum -c
 
 # copy to images
-cp ~/downloads/debian-13-genericcloud-amd64.qcow2 /var/lib/vlab/images/
-ls -l /var/lib/vlab/images
+mkdir -p /var/lib/vlab/images/linux
+cp ~/downloads/debian-13-genericcloud-amd64.qcow2 /var/lib/vlab/images/linux/
+ls -l /var/lib/vlab/images/linux
 ```
 
 ## Create management network
@@ -157,7 +158,7 @@ ip -br a show p2p-2
 
 `vm-$id`: 1 vCPU, 4G RAM, UEFI (BIOS boot loops on this host), qcow2 overlay on base image + cloud-init seed. All files in `vms/vm-$id`.
 `id` = 2 digits (01-99), `n` = id w/o leading zero for IPs.
-NICs (MAC `c0:ff:ee:<id>:00:0N`): `mgmt-1` 172.255.1.$n/24, `p2p-1` 192.168.1.$n/24, `p2p-2` 192.168.2.$n/24.
+NICs (MAC `ca:ff:ee:<id>:00:0N`): `mgmt-1` 172.255.1.$n/24, `p2p-1` 192.168.1.$n/24, `p2p-2` 192.168.2.$n/24.
 
 ```shell
 # vars
@@ -165,11 +166,11 @@ id=01
 name=vm-$id
 dir=/var/lib/vlab/vms/$name
 n=$((10#$id))
-mac=c0:ff:ee:$id:00
+mac=ca:ff:ee:$id:00
 
 # folder + disk (copy-on-write overlay, base image must stay unchanged)
 mkdir -p $dir
-qemu-img create -f qcow2 -F qcow2 -b /var/lib/vlab/images/debian-13-genericcloud-amd64.qcow2 $dir/$name.qcow2
+qemu-img create -f qcow2 -F qcow2 -b /var/lib/vlab/images/linux/debian-13-genericcloud-amd64.qcow2 $dir/$name.qcow2
 
 # cloud-init: meta-data
 cat > $dir/meta-data <<EOT

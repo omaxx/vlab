@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from vlab.spec import Debian
+from vlab.spec import Linux
 from vlab.utils import load_file
 
 from conftest import TOPOLOGY
@@ -37,8 +37,8 @@ def test_unsupported(tmp_path):
 
 @pytest.mark.parametrize("n", [1, 2])
 def test_topology_yaml_and_jsonnet_match(n):
-    y = Debian.from_dict(load_file(str(TOPOLOGY / f"test.yaml/vm-{n}.yaml")))
-    j = Debian.from_dict(load_file(str(TOPOLOGY / f"test.jsonnet/vm-{n}.jsonnet")))
+    y = Linux.from_dict(load_file(str(TOPOLOGY / f"test.yaml/vm-{n}.yaml")))
+    j = Linux.from_dict(load_file(str(TOPOLOGY / f"test.jsonnet/vm-{n}.jsonnet")))
     assert y == j
     assert y.name == f"vm-0{n}"
     assert [p.ip for p in y.ports] == [f"172.255.1.{n}/24", f"192.168.1.{n}/24", f"192.168.2.{n}/24"]
