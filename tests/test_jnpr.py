@@ -4,7 +4,7 @@ import subprocess
 import pytest
 
 from vlab.host import Host
-from vlab.spec import VMX, Device, Port
+from vlab.spec import VMX, VQFX, Device, Port
 from vlab.spec.jnpr import inject_config
 from vlab.utils import load_file
 from vlab.virt import DHCPHost, Disk, Interface, VNet
@@ -147,3 +147,53 @@ def test_topology_vmx():
     assert isinstance(d, VMX)
     assert (d.name, d.id, d.mgmt.ip, len(d.ports)) == ("vmx-1", 3, "172.255.1.3/24", 2)
     assert d.config is not None and "host-name vmx-1;" in d.config
+
+
+def make_vqfx(name: str = "vqfx-1", **kw) -> VQFX:
+    return VQFX(
+        name=name, id=4, version="20.2",
+        re_image="vqfx-20.2R1.10-re-qemu.qcow2", fpc_image="vqfx-20.2R1-2019010209-pfe-qemu.qcow",
+        ports=[Port("p2p-1"), Port("p2p-2")], **kw,
+    )
+
+
+def test_vqfx_layout():
+    re0, pfe = make_vqfx().vms()
+    assert (re0.name, re0.machine, re0.uefi, re0.memory, re0.vcpus) == ("vqfx-1~re0", "pc", False, 1024, 1)
+    assert re0.disks == [Disk("junos.qcow2", "hda", bus="ide")]
+    assert [(i.source, i.target, i.mac) for i in re0.interfaces] == [
+        ("mgmt-1", "vqfx-1~re0~mgmt", "ca:ff:ee:04:10:00"),  # em0
+        ("vqfx-1~int", "vqfx-1~re0~int", "ca:ff:ee:04:10:01"),  # em1
+        ("vqfx-1~res", "vqfx-1~re0~res", "ca:ff:ee:04:10:02"),  # em2 (old code reused :01)
+        ("p2p-1", "vqfx-1-0-0", "ca:ff:ee:04:00:00"),  # xe-0/0/0 (old code collided with em0/em1)
+        ("p2p-2", "vqfx-1-0-1", "ca:ff:ee:04:00:01"),
+    ]
+    assert (pfe.name, pfe.machine, pfe.uefi, pfe.memory, pfe.vcpus) == ("vqfx-1~fpc0", "pc", False, 1024, 1)
+    assert pfe.disks == [Disk("pfe.qcow2", "hda", bus="ide")]
+    assert [(i.source, i.mac) for i in pfe.interfaces] == [("mgmt-1", "ca:ff:ee:04:00:0a"), ("vqfx-1~int", "ca:ff:ee:04:00:0b")]
+    assert len({i.mac for vm in make_vqfx().vms() for i in vm.interfaces}) == 7
+
+
+def test_vqfx_vnets_and_images():
+    assert make_vqfx().vnets() == [VNet("vqfx-1~int", devices=["vqfx-1"]), VNet("vqfx-1~res", devices=["vqfx-1"])]
+    assert make_vqfx().images_dir(Host()) == "/var/lib/vlab/images/junos/vqfx/20.2"
+
+
+def test_vqfx_prepare():
+    host = FakeHost()
+    make_vqfx().prepare(host, overwrite=False)
+    img, re0, pfe = "/var/lib/vlab/images/junos/vqfx/20.2", "/var/lib/vlab/vms/vqfx-1~re0", "/var/lib/vlab/vms/vqfx-1~fpc0"
+    assert host.commands() == [
+        ("test", "-e", re0), ("mkdir", "-p", re0),
+        ("qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", f"{img}/vqfx-20.2R1.10-re-qemu.qcow2", f"{re0}/junos.qcow2"),
+        ("test", "-e", pfe), ("mkdir", "-p", pfe),
+        ("qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", f"{img}/vqfx-20.2R1-2019010209-pfe-qemu.qcow", f"{pfe}/pfe.qcow2"),
+    ]
+
+
+def test_topology_vqfx():
+    d = Device.from_dict(load_file(str(TOPOLOGY / "test.yaml/vqfx-1.yaml")))
+    assert isinstance(d, VQFX)
+    assert (d.name, d.version, d.dhcp_leases()) == (
+        "vqfx-1", "20.2", [("mgmt-1", DHCPHost("ca:ff:ee:04:10:00", "172.255.1.4", "vqfx-1"))]
+    )
