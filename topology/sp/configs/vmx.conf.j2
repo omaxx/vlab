@@ -34,15 +34,6 @@ interfaces {
         }
     }
 {%- endfor %}
-{%- if loopback is defined %}
-    lo0 {
-        unit 0 {
-            family inet {
-                address {{ loopback }};
-            }
-        }
-    }
-{%- endif %}
 }
 {%- if static_routes is defined and static_routes %}
 routing-options {

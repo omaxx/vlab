@@ -32,8 +32,8 @@ def test_routers(devices):
 def test_links_and_ips(devices):
     ends: dict[str, list[tuple[str, IPv4Interface]]] = {}
     for d in devices.values():
-        ifaces = d.vars["interfaces"]
-        assert list(ifaces) == [f"ge-0/0/{i}" for i in range(len(d.ports))]  # port N = ge-0/0/N
+        ifaces = {k: v for k, v in d.vars["interfaces"].items() if k != "lo0"}
+        assert list(d.vars["interfaces"]) == ["lo0", *(f"ge-0/0/{i}" for i in range(len(d.ports)))]  # port N = ge-0/0/N
         for port, ifc in zip(d.ports, ifaces.values()):
             ip = IPv4Interface(ifc["ip"])
             assert int(ip.ip) & 0xFF == d.id  # .id on every link
@@ -49,9 +49,10 @@ def test_links_and_ips(devices):
 
 def test_loopbacks_and_rendered(devices):
     expected = {f"R{i}": f"10.0.0.{i}/32" for i in range(1, 9)} | {"R10": "10.10.0.1/32", "R20": "10.20.0.1/32"}
-    assert {n: d.vars["loopback"] for n, d in devices.items()} == expected
-    for d in devices.values():
-        assert d.rendered_config is not None and f"address {d.vars['loopback']};" in d.rendered_config
+    assert {n: d.vars["interfaces"]["lo0"]["ip"] for n, d in devices.items()} == expected
+    for n, d in devices.items():
+        cfg = d.rendered_config
+        assert cfg is not None and f"    lo0 {{\n        unit 0 {{\n            family inet {{\n                address {expected[n]};" in cfg
 
 
 def test_unique_macs_and_consoles(devices):
