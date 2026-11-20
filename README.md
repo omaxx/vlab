@@ -24,7 +24,12 @@ uv sync
 name: mgmt-1
 ip: 172.255.1.254/24
 forward: nat
+# mtu: 9000              # optional, default 1500
+# dhcp:                  # optional ranges / fixed hosts; devices add their own (port dhcp: true)
+#   ranges: [{start: 172.255.1.100, end: 172.255.1.199}]
 ```
+
+`forward: bridge` + `bridge: br0` wraps an existing host bridge as a network (no ip/dhcp/mtu).
 
 `topology/test.yaml/vm-1.yaml` — Debian cloud image VM, configured by cloud-init:
 
@@ -39,6 +44,7 @@ ports:
     ip: 172.255.1.1/24
     gateway: 172.255.1.254
     dns: [172.255.1.254]
+    dhcp: true            # fixed DHCP lease + DNS name "vm-01" in mgmt-1 (live, no restart)
   - network: p2p-1
     ip: 192.168.1.1/24
   - bridge: br0           # host bridge instead of libvirt network

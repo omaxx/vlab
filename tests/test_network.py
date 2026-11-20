@@ -44,3 +44,20 @@ def test_deploy_existing_kept(host):
 def test_topology_mgmt(ext):
     n = Network.from_dict(load_file(str(TOPOLOGY / f"test.{ext}/mgmt-1.{ext}")))
     assert n == Network("mgmt-1", ip="172.255.1.254/24", forward="nat")
+
+
+def test_mtu_dhcp_from_dict(host):
+    n = Network.from_dict({
+        "name": "lab", "ip": "10.6.0.254/24", "mtu": 9000,
+        "dhcp": {"ranges": [{"start": "10.6.0.100", "end": "10.6.0.199"}], "hosts": [{"mac": "c0:ff:ee:06:00:01", "ip": "10.6.0.1"}]},
+    })
+    n.deploy(host)
+    (vnet,) = [v for v, _ in list_vnets(host) if v.name == "lab"]
+    assert vnet.mtu == 9000
+    assert vnet.dhcp is not None and len(vnet.dhcp.ranges) == 1 and len(vnet.dhcp.hosts) == 1
+
+
+def test_forward_bridge():
+    assert Network("lan", bridge="br0", forward="bridge").vnets()[0].forward == "bridge"
+    with pytest.raises(ValueError, match="needs bridge"):
+        Network("lan", forward="bridge").vnets()

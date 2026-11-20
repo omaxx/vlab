@@ -9,7 +9,7 @@ import pytest
 from vlab.host import Host
 from vlab.virt import (
     VM, VNet, Disk, Interface, define_vm, define_vnet, delete_vms, list_vms, list_vnets,
-    start_vms, start_vnets, stop_vms, stop_vnets,
+    start_vms, start_vnets, stop_vms, stop_vnets, DHCP, DHCPHost, remove_dhcp_host, set_dhcp_host,
 )
 
 
@@ -175,3 +175,56 @@ def test_define_vm_udp_and_target(host, conn):
     back = VM.from_xml(conn.lookupByName("u1").XMLDesc())
     assert back.interfaces[0] == vm.interfaces[0]
     assert (back.interfaces[1].target, back.interfaces[1].model) == ("u1-p2", "e1000")
+
+
+
+def leases(conn, network):
+    vnet = VNet.from_xml(conn.networkLookupByName(network).XMLDesc())
+    return vnet.dhcp.hosts if vnet.dhcp else []
+
+
+def dns_hosts(conn, network):
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(conn.networkLookupByName(network).XMLDesc())
+    return sorted((h.get("ip"), n.text) for h in root.iterfind("dns/host") for n in h.iterfind("hostname"))
+
+
+@pytest.mark.parametrize("active", [False, True])
+def test_set_dhcp_host(host, conn, active):
+    define_vnet(host, VNet("m", ip="10.9.0.254/24", devices=[]))  # no <dhcp> yet
+    if active:
+        conn.networkLookupByName("m").create()
+    a = DHCPHost("c0:ff:ee:01:00:01", "10.9.0.1", "vm-01")
+    set_dhcp_host(host, "m", a)
+    set_dhcp_host(host, "m", a)  # unchanged: no duplicate
+    assert leases(conn, "m") == [a]
+    assert dns_hosts(conn, "m") == [("10.9.0.1", "vm-01")]  # name resolvable without network restart
+    moved = DHCPHost("c0:ff:ee:01:00:01", "10.9.0.11", "vm-01")
+    set_dhcp_host(host, "m", moved)  # same MAC: replaced
+    assert leases(conn, "m") == [moved]
+    assert dns_hosts(conn, "m") == [("10.9.0.11", "vm-01")]
+    remove_dhcp_host(host, "m", "c0:ff:ee:01:00:01")
+    remove_dhcp_host(host, "m", "c0:ff:ee:01:00:01")  # already gone: no error
+    assert leases(conn, "m") == []
+    assert dns_hosts(conn, "m") == []
+
+
+def test_unnamed_lease_no_dns(host, conn):
+    define_vnet(host, VNet("m", ip="10.9.0.254/24", devices=[]))
+    set_dhcp_host(host, "m", DHCPHost("c0:ff:ee:01:00:01", "10.9.0.1"))
+    assert dns_hosts(conn, "m") == []
+
+
+def test_set_dhcp_host_unmanaged_untouched(host, conn, caplog):
+    define_vnet(host, VNet("infra", ip="10.8.0.254/24"))
+    set_dhcp_host(host, "infra", DHCPHost("c0:ff:ee:01:00:01", "10.8.0.1"))
+    assert leases(conn, "infra") == []
+    assert "not managed by vlab" in caplog.text
+
+
+def test_delete_vms_removes_leases(host, conn):
+    define_vnet(host, VNet("m", ip="10.9.0.254/24", devices=[], dhcp=DHCP(hosts=[DHCPHost("c0:ff:ee:09:00:09", "10.9.0.9")])))
+    define_vm(host, VM("vm-01", interfaces=[Interface("network", "m", mac="c0:ff:ee:01:00:01")]))
+    set_dhcp_host(host, "m", DHCPHost("c0:ff:ee:01:00:01", "10.9.0.1", "vm-01"))
+    delete_vms(host, "vm-01")
+    assert leases(conn, "m") == [DHCPHost("c0:ff:ee:09:00:09", "10.9.0.9")]  # other lease kept

@@ -4,7 +4,7 @@ import pytest
 import yaml
 
 from vlab.spec import Debian, Port
-from vlab.virt import Disk, Interface
+from vlab.virt import DHCPHost, Disk, Interface
 
 from conftest import FakeHost
 
@@ -153,3 +153,17 @@ def test_from_dict():
     assert d.ports == [Port("mgmt-1"), Port(bridge="br0")]
     assert (d.vcpus, d.memory, d.image) == (1, 4096, "debian-13-genericcloud-amd64.qcow2")
     assert json.loads(d.meta_data())["instance-id"] == "r5"
+
+
+def test_dhcp_leases():
+    d = Debian(name="r5", id=5, user="u", ports=[
+        Port("mgmt-1", "172.255.1.5/24", dhcp=True),
+        Port("p2p-1", "192.168.1.5/24"),
+    ])
+    assert d.dhcp_leases() == [("mgmt-1", DHCPHost("c0:ff:ee:05:00:01", "172.255.1.5", "r5"))]
+
+
+@pytest.mark.parametrize("port", [Port("mgmt-1", dhcp=True), Port(bridge="br0", ip="10.0.0.1/24", dhcp=True)])
+def test_dhcp_lease_needs_network_and_ip(port):
+    with pytest.raises(ValueError, match="dhcp needs network and ip"):
+        Debian(name="r5", id=5, user="u", ports=[port]).dhcp_leases()

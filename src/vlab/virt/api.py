@@ -14,7 +14,7 @@ import libvirt
 
 from ..host import Host
 from .vm import VM
-from .vnet import VNet
+from .vnet import DHCPHost, VNet
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,89 @@ def delete_vms(host: Host, *names: str) -> None:
             has_nvram = ET.fromstring(xml).find("os/nvram") is not None  # UEFI vars file
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM if has_nvram else 0)
             logger.info("%s: VM `%s`: DELETED", host, name)
+            for iface in VM.from_xml(xml).interfaces:
+                if iface.type == "network" and iface.mac:
+                    _remove_dhcp_host(conn, host, iface.source, iface.mac)
             _stop_vnets(conn, host, networks)
+
+
+def set_dhcp_host(host: Host, network: str, lease: DHCPHost) -> None:
+    """Add or replace (same MAC) a fixed DHCP lease in a managed network, live if running (no restart).
+
+    A named lease also gets a DNS host entry: dnsmasq serves names of DHCP hosts added to a running
+    network only after restart, DNS host entries right away.
+    Networks without vlab metadata are not touched (warning).
+    """
+    with _connect(host) as conn:
+        net = conn.networkLookupByName(network)
+        vnet = VNet.from_xml(net.XMLDesc())
+        if not vnet.managed:
+            logger.warning("%s: VNet `%s`: not managed by vlab, DHCP host %s not added", host, network, lease.mac)
+            return
+        current = vnet.dhcp.hosts if vnet.dhcp else []
+        same = [h for h in current if h.mac == lease.mac]
+        if same == [lease]:
+            logger.debug("%s: VNet `%s`: DHCP host %s unchanged", host, network, lease.mac)
+        else:
+            for old in same:
+                _update(net, libvirt.VIR_NETWORK_UPDATE_COMMAND_DELETE, DHCP_HOST, _xml(old.to_xml()))
+                _remove_dns_host(net, old)
+            _update(net, libvirt.VIR_NETWORK_UPDATE_COMMAND_ADD_LAST, DHCP_HOST, _xml(lease.to_xml()))
+            logger.info("%s: VNet `%s`: DHCP host %s -> %s (%s)", host, network, lease.mac, lease.ip, lease.name)
+        if lease.name and (lease.ip, lease.name) not in _dns_hosts(net):
+            _update(net, libvirt.VIR_NETWORK_UPDATE_COMMAND_ADD_LAST, DNS_HOST, _dns_host_xml(lease))
+
+
+def remove_dhcp_host(host: Host, network: str, mac: str) -> None:
+    """Remove fixed DHCP lease of MAC (and its DNS host entry) from a managed network, if present."""
+    with _connect(host) as conn:
+        _remove_dhcp_host(conn, host, network, mac)
+
+
+DHCP_HOST = libvirt.VIR_NETWORK_SECTION_IP_DHCP_HOST
+DNS_HOST = libvirt.VIR_NETWORK_SECTION_DNS_HOST
+
+
+def _remove_dhcp_host(conn: libvirt.virConnect, host: Host, network: str, mac: str) -> None:
+    try:
+        net = conn.networkLookupByName(network)
+    except libvirt.libvirtError:
+        return  # network gone: nothing to clean up
+    vnet = VNet.from_xml(net.XMLDesc())
+    if not vnet.managed or vnet.dhcp is None:
+        return
+    for lease in [h for h in vnet.dhcp.hosts if h.mac == mac]:
+        _update(net, libvirt.VIR_NETWORK_UPDATE_COMMAND_DELETE, DHCP_HOST, _xml(lease.to_xml()))
+        _remove_dns_host(net, lease)
+        logger.info("%s: VNet `%s`: DHCP host %s removed", host, network, mac)
+
+
+def _dns_hosts(net: libvirt.virNetwork) -> set[tuple[str, str]]:
+    """(ip, hostname) pairs of the network's DNS host entries."""
+    root = ET.fromstring(net.XMLDesc())
+    return {(h.get("ip", ""), n.text or "") for h in root.iterfind("dns/host") for n in h.iterfind("hostname")}
+
+
+def _dns_host_xml(lease: DHCPHost) -> str:
+    entry = ET.Element("host", ip=lease.ip)
+    ET.SubElement(entry, "hostname").text = lease.name
+    return _xml(entry)
+
+
+def _remove_dns_host(net: libvirt.virNetwork, lease: DHCPHost) -> None:
+    if lease.name and (lease.ip, lease.name) in _dns_hosts(net):
+        _update(net, libvirt.VIR_NETWORK_UPDATE_COMMAND_DELETE, DNS_HOST, _dns_host_xml(lease))
+
+
+def _xml(elem: ET.Element) -> str:
+    return ET.tostring(elem, encoding="unicode")
+
+
+def _update(net: libvirt.virNetwork, command: int, section: int, xml: str) -> None:
+    flags = libvirt.VIR_NETWORK_UPDATE_AFFECT_CONFIG
+    if net.isActive():
+        flags |= libvirt.VIR_NETWORK_UPDATE_AFFECT_LIVE
+    net.update(command, section, -1, xml, flags)
 
 
 def start_vnets(host: Host, *names: str) -> None:

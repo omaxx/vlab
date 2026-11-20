@@ -86,3 +86,19 @@ def test_delete_missing_folder_skipped():
     delete(host, "r2-a")
     assert not [c for c in host.commands() if c[0] == "rm"]
     conn.close()
+
+
+def test_deploy_registers_dhcp_leases(host):
+    from vlab.virt import DHCPHost
+
+    @dataclass
+    class WithLease(TwoVms):
+        def dhcp_leases(self):
+            return [(f"{self.name}-int", DHCPHost("c0:ff:ee:07:00:01", "10.7.0.1", self.name))]
+
+        def vnets(self):
+            return [VNet(f"{self.name}-int", ip="10.7.0.254/24", devices=[self.name])]
+
+    WithLease("r7").deploy(host)
+    vnet = {v.name: v for v, _ in list_vnets(host)}["r7-int"]
+    assert vnet.dhcp.hosts == [DHCPHost("c0:ff:ee:07:00:01", "10.7.0.1", "r7")]

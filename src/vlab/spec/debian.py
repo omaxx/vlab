@@ -4,7 +4,7 @@ import logging
 from typing import Any, cast
 
 from ..host import Host
-from ..virt import VM, Disk, Interface
+from ..virt import VM, DHCPHost, Disk, Interface
 from ..virt.vm import NicModel, NicType
 from .device import Device
 
@@ -24,6 +24,7 @@ class Port:
     local: str | None = None  # own "addr:port" for udp
     target: str | None = None  # host-side interface name (network/bridge), e.g. "vm01-p1"
     model: NicModel = "virtio"
+    dhcp: bool = False  # register fixed DHCP lease (ip, device name for DNS) in network on deploy
 
     def interface(self, mac: str) -> Interface:
         sources = {"network": self.network, "bridge": self.bridge, "udp": self.udp}
@@ -53,6 +54,16 @@ class Debian(Device):
 
     def mac(self, n: int) -> str:
         return f"c0:ff:ee:{self.id:02d}:00:{n:02d}"
+
+    def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:
+        leases = []
+        for n, p in enumerate(self.ports, 1):
+            if not p.dhcp:
+                continue
+            if p.network is None or p.ip is None:
+                raise ValueError(f"{self.name}: port {n}: dhcp needs network and ip")
+            leases.append((p.network, DHCPHost(self.mac(n), p.ip.split("/")[0], self.name)))
+        return leases
 
     def vms(self) -> list[VM]:
         return [

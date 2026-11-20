@@ -9,6 +9,7 @@ ports:
     ip: 172.255.1.2/24
     gateway: 172.255.1.254
     dns: [172.255.1.254]
+    dhcp: true            # fixed lease + DNS name in mgmt-1
   - network: p2p-1
     ip: 192.168.1.2/24
   - network: p2p-2

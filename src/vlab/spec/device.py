@@ -4,7 +4,7 @@ import logging
 from mashumaro import DataClassDictMixin
 
 from ..host import Host
-from ..virt import VM, VNet, define_vm, delete_vms, start_vms, stop_vms
+from ..virt import VM, DHCPHost, VNet, define_vm, delete_vms, set_dhcp_host, start_vms, stop_vms
 from .network import define_missing_vnets
 
 logger = logging.getLogger(__name__)
@@ -26,15 +26,21 @@ class Device(DataClassDictMixin):
         """Internal networks of this device."""
         return []
 
+    def dhcp_leases(self) -> list[tuple[str, DHCPHost]]:
+        """Fixed DHCP leases (network name, lease) registered on deploy; removed by delete_vms via MAC."""
+        return []
+
     def prepare(self, host: Host, overwrite: bool) -> None:
         """Create VM files on host; keep existing ones unless overwrite."""
 
     def deploy(self, host: Host, overwrite: bool = False) -> None:
-        """Define missing internal VNets, prepare files, define VMs (not started)."""
+        """Define missing internal VNets, prepare files, define VMs (not started), register DHCP leases."""
         define_missing_vnets(host, self.vnets())
         self.prepare(host, overwrite)
         for vm in self.vms():
             define_vm(host, vm)
+        for network, lease in self.dhcp_leases():
+            set_dhcp_host(host, network, lease)
 
     def start(self, host: Host) -> None:
         start_vms(host, *self.vm_names())
