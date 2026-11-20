@@ -1,8 +1,23 @@
 system {
     host-name {{ device.name }};
     root-authentication {
-        encrypted-password "{{ root_password }}";
+        encrypted-password "{{ root_pass }}";
     }
+{%- if user_name is defined %}
+{%- set key_types = {"ssh-rsa": "ssh-rsa", "ssh-ed25519": "ssh-ed25519", "ssh-dss": "ssh-dsa",
+                     "ecdsa-sha2-nistp256": "ssh-ecdsa", "ecdsa-sha2-nistp384": "ssh-ecdsa", "ecdsa-sha2-nistp521": "ssh-ecdsa"} %}
+    login {
+        user {{ user_name }} {
+            class super-user;
+            authentication {
+                encrypted-password "{{ user_pass }}";
+{%- for key in (user_key | default("")).splitlines() if key.strip() %}
+                {{ key_types[key.split()[0]] }} "{{ key.strip() }}";
+{%- endfor %}
+            }
+        }
+    }
+{%- endif %}
     services {
         ssh {
             root-login allow;
