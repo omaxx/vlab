@@ -78,12 +78,12 @@ def test_descriptions_point_to_peer_port(devices):
 def test_users(devices):
     for d in devices.values():
         v = d.vars
-        assert v["user_name"] == "jnpr"
+        assert v["user_name"] == "maxim"
         assert v["root_pass"].startswith("$6$") and v["user_pass"].startswith("$6$")
         cfg = d.rendered_config
         assert cfg is not None
         assert f'root-authentication {{\n        encrypted-password "{v["root_pass"]}";' in cfg
-        assert "user jnpr {\n            class super-user;" in cfg
+        assert "user maxim {\n            class super-user;" in cfg
         assert f'encrypted-password "{v["user_pass"]}";' in cfg
         keys = [k for k in v["user_key"].splitlines() if k.strip()]
         assert keys
