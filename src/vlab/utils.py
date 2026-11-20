@@ -1,11 +1,13 @@
+from collections.abc import Hashable
 from pathlib import Path
+from typing import Any
 import json
 
 import _jsonnet
 import yaml
 
 
-def load_file(path: str) -> dict:
+def load_file(path: str) -> dict[Hashable, Any]:
     """Load local spec file as dict; format by extension: .yaml/.yml, .json, .jsonnet."""
     p = Path(path)
     match p.suffix:
