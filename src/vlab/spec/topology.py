@@ -11,9 +11,8 @@ from .network import Network
 
 @dataclass
 class Topology:
-    """Lab topology file: `devices:` and `networks:` maps of name -> spec (name may be omitted in the spec),
-    optional `templates:` map of name -> partial spec; a spec with `template: <name>` is deep-merged over it
-    (maps merged recursively, lists and scalars from the spec win).
+    """Lab topology file: `devices:` and `networks:` maps of name -> spec (name may be omitted in the spec).
+    Top-level keys starting with `x-` are ignored: a place for YAML anchors (`x-vmx: &vmx` ... `<<: *vmx`).
 
     Spec-relative files (e.g. configs/ templates) resolve against the topology file's folder.
     """
@@ -31,28 +30,23 @@ class Topology:
 
 def load_topology(path: str) -> Topology:
     data = load_file(path)
-    unknown = set(data) - {"devices", "networks", "templates"}
+    unknown = {k for k in data if not str(k).startswith("x-")} - {"devices", "networks"}
     if unknown:
         raise ValueError(
-            f"{path}: unknown top-level keys {sorted(map(str, unknown))}, expected devices, networks, templates"
+            f"{path}: unknown top-level keys {sorted(map(str, unknown))}, expected devices, networks, x-*"
         )
-    templates = data.get("templates") or {}
-    if not isinstance(templates, dict):
-        raise ValueError(f"{path}: templates must be a map of name -> partial spec")
     spec_dir = str(Path(path).resolve().parent)
     devices = []
-    for name, spec in _named(path, data.get("devices"), "devices", templates):
+    for name, spec in _named(path, data.get("devices"), "devices"):
         device = Device.from_dict(spec)
         device.resolve(spec_dir)
         devices.append(device)
-    networks = [Network.from_dict(spec) for _, spec in _named(path, data.get("networks"), "networks", templates)]
+    networks = [Network.from_dict(spec) for _, spec in _named(path, data.get("networks"), "networks")]
     return Topology(devices=devices, networks=networks)
 
 
-def _named(
-    path: str, section: Any, key: str, templates: dict[Hashable, Any]
-) -> list[tuple[str, dict[Hashable, Any]]]:
-    """Section map name -> spec: template merged, name filled in; name in spec must match the key."""
+def _named(path: str, section: Any, key: str) -> list[tuple[str, dict[Hashable, Any]]]:
+    """Section map name -> spec: copy each spec with name filled in; name in spec must match the key."""
     if section is None:
         return []
     if not isinstance(section, dict):
@@ -60,19 +54,8 @@ def _named(
     res = []
     for name, spec in section.items():
         spec = dict(spec or {})
-        if (tpl := spec.pop("template", None)) is not None:
-            if tpl not in templates:
-                raise ValueError(f"{path}: {key}.{name}: unknown template {tpl!r}")
-            spec = deep_merge(templates[tpl] or {}, spec)
         if spec.setdefault("name", name) != name:
             raise ValueError(f"{path}: {key}.{name}: name {spec['name']!r} differs from key")
         res.append((str(name), spec))
     return res
 
-
-def deep_merge(base: dict[Hashable, Any], over: dict[Hashable, Any]) -> dict[Hashable, Any]:
-    """New dict: over merged into base; nested maps merged recursively, other values from over replace."""
-    res = dict(base)
-    for k, v in over.items():
-        res[k] = deep_merge(res[k], v) if isinstance(res.get(k), dict) and isinstance(v, dict) else v
-    return res

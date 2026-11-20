@@ -1,24 +1,21 @@
 # SP lab from topology/topology.drawio (diagram "sp"): 10 Juniper vMX
 # P: R1-R4, PE: R5-R8, CE: R10, R20; id = router number, link ip .<id>, loopbacks from the drawing
 # links are p2p: networks R<a>_R<b>, subnet 10.0.<a><b>.0/24 (R10/R20 count as 9)
-# all devices also on mgmt-1 (networks/mgmt.yaml), mgmt ip 172.255.1.<id> (static, no dhcp)
+# all devices also on mgmt-1 (networks/mgmt.yaml); fxp0 static ip vars.mgmt_ip 172.255.1.<id>, no dhcp
 # config template configs/vmx.conf.j2
 
-templates:                # common parts, deep-merged under each device's own spec
-  vmx:
-    type: jnpr/vmx
-    version: 24.4R1-S2.9
-    re_image: junos-vmx-x86-64-24.4R1-S2.9.qcow2
-    fpc_image: vFPC-20241118.img
-    mgmt:
-      network: mgmt-1
+x-vmx: &vmx               # common part of all routers (x-* keys are ignored by vlab)
+  type: jnpr/vmx
+  version: 24.4R1-S2.9
+  re_image: junos-vmx-x86-64-24.4R1-S2.9.qcow2
+  fpc_image: vFPC-20241118.img
+  mgmt:
+    network: mgmt-1
 
 devices:
   R1:
-    template: vmx
+    <<: *vmx
     id: 1
-    mgmt:
-      ip: 172.255.1.1/24
     ports:
       - p2p: R1_R3
       - p2p: R1_R4
@@ -48,10 +45,8 @@ devices:
           ip: 10.0.12.1/24
 
   R2:
-    template: vmx
+    <<: *vmx
     id: 2
-    mgmt:
-      ip: 172.255.1.2/24
     ports:
       - p2p: R2_R4
       - p2p: R2_R3
@@ -81,10 +76,8 @@ devices:
           ip: 10.0.12.2/24
 
   R3:
-    template: vmx
+    <<: *vmx
     id: 3
-    mgmt:
-      ip: 172.255.1.3/24
     ports:
       - p2p: R1_R3
       - p2p: R2_R3
@@ -114,10 +107,8 @@ devices:
           ip: 10.0.34.3/24
 
   R4:
-    template: vmx
+    <<: *vmx
     id: 4
-    mgmt:
-      ip: 172.255.1.4/24
     ports:
       - p2p: R2_R4
       - p2p: R1_R4
@@ -147,10 +138,8 @@ devices:
           ip: 10.0.34.4/24
 
   R5:
-    template: vmx
+    <<: *vmx
     id: 5
-    mgmt:
-      ip: 172.255.1.5/24
     ports:
       - p2p: R1_R5
       - p2p: R2_R5
@@ -180,10 +169,8 @@ devices:
           ip: 10.0.57.5/24
 
   R6:
-    template: vmx
+    <<: *vmx
     id: 6
-    mgmt:
-      ip: 172.255.1.6/24
     ports:
       - p2p: R2_R6
       - p2p: R1_R6
@@ -213,10 +200,8 @@ devices:
           ip: 10.0.68.6/24
 
   R7:
-    template: vmx
+    <<: *vmx
     id: 7
-    mgmt:
-      ip: 172.255.1.7/24
     ports:
       - p2p: R3_R7
       - p2p: R4_R7
@@ -246,10 +231,8 @@ devices:
           ip: 10.0.57.7/24
 
   R8:
-    template: vmx
+    <<: *vmx
     id: 8
-    mgmt:
-      ip: 172.255.1.8/24
     ports:
       - p2p: R4_R8
       - p2p: R3_R8
@@ -279,10 +262,8 @@ devices:
           ip: 10.0.68.8/24
 
   R10:
-    template: vmx
+    <<: *vmx
     id: 10
-    mgmt:
-      ip: 172.255.1.10/24
     ports:
       - p2p: R5_R10
       - p2p: R6_R10
@@ -300,10 +281,8 @@ devices:
           ip: 10.0.69.10/24
 
   R20:
-    template: vmx
+    <<: *vmx
     id: 20
-    mgmt:
-      ip: 172.255.1.20/24
     ports:
       - p2p: R7_R20
       - p2p: R8_R20

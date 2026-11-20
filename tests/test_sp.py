@@ -21,7 +21,8 @@ def test_routers(devices):
     for name, d in devices.items():
         assert isinstance(d, VMX)
         assert d.id == int(name[1:])  # id = router number
-        assert (d.mgmt.network, d.mgmt.ip, d.mgmt.dhcp) == ("mgmt-1", f"172.255.1.{d.id}/24", False)  # from template + own
+        assert (d.mgmt.network, d.mgmt.ip, d.mgmt.dhcp) == ("mgmt-1", None, False)  # whole mgmt port from the anchor
+        assert d.vars["mgmt_ip"] == f"172.255.1.{d.id}/24"  # fxp0 static, set by the config
         assert (d.version, d.re_image, d.fpc_image) == (
             "24.4R1-S2.9", "junos-vmx-x86-64-24.4R1-S2.9.qcow2", "vFPC-20241118.img",
         )

@@ -104,6 +104,7 @@ def test_load_topology_names_from_keys(tmp_path):
     ("devices:\n  r1: {type: linux, name: r2, id: 1, user: u}\n", "differs from key"),
     ("devices: [a]\n", "must be a map"),
     ("routers: {}\n", "unknown top-level keys"),
+    ("templates: {}\n", "unknown top-level keys"),
 ])
 def test_load_topology_errors(tmp_path, text, err):
     with pytest.raises(ValueError, match=err):
@@ -120,50 +121,22 @@ def test_load_topology_resolves_configs_next_to_file(tmp_path):
     assert t.devices[0].rendered_config == "host-name v1;"
 
 
-def test_templates_deep_merge(tmp_path):
+
+def test_yaml_anchors_in_x_keys(tmp_path):
     t = load_topology(write(tmp_path, """
-templates:
-  srv:
-    type: linux
-    user: u
-    vcpus: 2
-    ports: [{network: a}]
-    ssh_keys: [k1]
+x-srv: &srv
+  type: linux
+  user: u
+  ports: [{network: mgmt-1}]
 devices:
   s1:
-    template: srv
+    <<: *srv
     id: 1
-    vcpus: 4               # scalar: device wins
-    ports: [{network: b}]  # list: replaced, not appended
   s2:
-    template: srv
+    <<: *srv
     id: 2
+    user: other   # own key wins over the anchor
 """))
     s1, s2 = t.devices
-    assert (s1.vcpus, [p.network for p in s1.ports], s1.ssh_keys) == (4, ["b"], ["k1"])
-    assert (s2.vcpus, [p.network for p in s2.ports], s2.user) == (2, ["a"], "u")
-
-
-def test_templates_nested_maps_merge(tmp_path):
-    t = load_topology(write(tmp_path, """
-templates:
-  vmx: {type: jnpr/vmx, version: v, re_image: r, fpc_image: f, mgmt: {network: mgmt-1}, vars: {a: 1, b: 2}}
-devices:
-  v1: {template: vmx, id: 9, mgmt: {ip: 172.255.1.9/24}, vars: {b: 3}}
-"""))
-    (v1,) = t.devices
-    assert (v1.mgmt.network, v1.mgmt.ip) == ("mgmt-1", "172.255.1.9/24")
-    assert v1.vars == {"a": 1, "b": 3}
-
-
-def test_unknown_template(tmp_path):
-    with pytest.raises(ValueError, match="unknown template 'nope'"):
-        load_topology(write(tmp_path, "devices:\n  s1: {template: nope, type: linux, id: 1, user: u}\n"))
-
-
-def test_deep_merge_does_not_modify_template():
-    from vlab.spec.topology import deep_merge
-    base = {"mgmt": {"network": "m"}, "x": [1]}
-    merged = deep_merge(base, {"mgmt": {"ip": "1.1.1.1/24"}, "x": [2]})
-    assert merged == {"mgmt": {"network": "m", "ip": "1.1.1.1/24"}, "x": [2]}
-    assert base == {"mgmt": {"network": "m"}, "x": [1]}
+    assert (s1.user, [p.network for p in s1.ports]) == ("u", ["mgmt-1"])
+    assert (s2.user, [p.network for p in s2.ports]) == ("other", ["mgmt-1"])
