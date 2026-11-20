@@ -42,3 +42,11 @@ def test_topology_yaml_and_jsonnet_match(n):
     assert y == j
     assert y.name == f"vm-0{n}"
     assert [p.ip for p in y.ports] == [f"172.255.1.{n}/24", f"192.168.1.{n}/24", f"192.168.2.{n}/24"]
+
+
+@pytest.mark.parametrize("ext, text", [("yaml", "- a\n- b\n"), ("json", "[1]"), ("jsonnet", "'x'"), ("yaml", "")])
+def test_not_a_mapping(tmp_path, ext, text):
+    f = tmp_path / f"spec.{ext}"
+    f.write_text(text)
+    with pytest.raises(ValueError, match="spec must be a mapping"):
+        load_file(str(f))

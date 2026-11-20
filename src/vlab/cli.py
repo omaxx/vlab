@@ -1,4 +1,6 @@
+from collections.abc import Callable
 import logging
+from typing import Any, TypeVar
 
 import click
 from rich.console import Console
@@ -11,6 +13,8 @@ from .spec import Debian, Network
 from .utils import load_file
 
 LOG_LEVELS = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 @click.group()
@@ -57,7 +61,8 @@ def select_vms(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_:
     return selected
 
 
-def vm_selection(f):
+def vm_selection(f: F) -> F:
+    """Add VM selection: VMS arguments, -d DEVICE, --all."""
     f = click.argument("vms", nargs=-1)(f)
     f = click.option("-d", "--device", "devices", multiple=True, help="all VMs of device (repeatable)")(f)
     f = click.option("--all", "all_", is_flag=True, help="all VMs managed by vlab")(f)
@@ -67,7 +72,7 @@ def vm_selection(f):
 @main.command()
 @vm_selection
 @click.pass_obj
-def start(host: Host, vms, devices, all_) -> None:
+def start(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool) -> None:
     """Start VMs and their vlab VNets."""
     virt.start_vms(host, *select_vms(host, vms, devices, all_))
 
@@ -75,7 +80,7 @@ def start(host: Host, vms, devices, all_) -> None:
 @main.command()
 @vm_selection
 @click.pass_obj
-def stop(host: Host, vms, devices, all_) -> None:
+def stop(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool) -> None:
     """Force off VMs, stop vlab VNets no longer used."""
     virt.stop_vms(host, *select_vms(host, vms, devices, all_))
 
@@ -84,7 +89,7 @@ def stop(host: Host, vms, devices, all_) -> None:
 @vm_selection
 @click.option("--keep-files", is_flag=True, help="keep VM folders on host")
 @click.pass_obj
-def delete(host: Host, vms, devices, all_, keep_files: bool) -> None:
+def delete(host: Host, vms: tuple[str, ...], devices: tuple[str, ...], all_: bool, keep_files: bool) -> None:
     """Delete VMs from libvirt (and their files unless --keep-files)."""
     spec.delete(host, *select_vms(host, vms, devices, all_), keep_files=keep_files)
 

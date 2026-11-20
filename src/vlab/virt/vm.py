@@ -25,9 +25,11 @@ class Interface:
         if self.network is not None:
             iface = ET.Element("interface", type="network")
             source = {"network": self.network}
-        else:
+        elif self.bridge is not None:
             iface = ET.Element("interface", type="bridge")
             source = {"bridge": self.bridge}
+        else:  # excluded by __post_init__
+            raise ValueError("Interface needs exactly one of network or bridge")
         if self.mac:
             ET.SubElement(iface, "mac", address=self.mac)
         ET.SubElement(iface, "source", source)

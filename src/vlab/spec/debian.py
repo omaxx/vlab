@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import json
 import logging
+from typing import Any
 
 from ..host import Host
 from ..virt import VM, Interface
@@ -69,9 +70,9 @@ class Debian(Device):
         return "#cloud-config\n" + json.dumps(cfg, indent=2) + "\n"
 
     def network_config(self) -> str:
-        ethernets = {}
+        ethernets: dict[str, dict[str, Any]] = {}
         for n, p in enumerate(self.ports, 1):
-            eth: dict = {"match": {"macaddress": self.mac(n)}}
+            eth: dict[str, Any] = {"match": {"macaddress": self.mac(n)}}
             if p.ip:
                 eth["addresses"] = [p.ip]
             if p.gateway:

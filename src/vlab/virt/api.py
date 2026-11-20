@@ -4,7 +4,7 @@ VNet rule: only networks with vlab metadata (VNet.managed) are started/stopped; 
 A managed network is stopped when no running VM is attached to it.
 """
 
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 import logging
 import xml.etree.ElementTree as ET
@@ -108,7 +108,7 @@ def stop_vnets(host: Host, *names: str) -> None:
         _stop_vnets(conn, host, names)
 
 
-def _start_vnets(conn: libvirt.virConnect, host: Host, names) -> None:
+def _start_vnets(conn: libvirt.virConnect, host: Host, names: Iterable[str]) -> None:
     for name in dict.fromkeys(names):  # dedupe, keep order
         net = conn.networkLookupByName(name)
         if not VNet.from_xml(net.XMLDesc()).managed:
@@ -118,7 +118,7 @@ def _start_vnets(conn: libvirt.virConnect, host: Host, names) -> None:
             logger.info("%s: VNet `%s`: STARTED", host, name)
 
 
-def _stop_vnets(conn: libvirt.virConnect, host: Host, names) -> None:
+def _stop_vnets(conn: libvirt.virConnect, host: Host, names: Iterable[str]) -> None:
     for name in dict.fromkeys(names):
         net = conn.networkLookupByName(name)
         if not VNet.from_xml(net.XMLDesc()).managed:
