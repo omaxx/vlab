@@ -1,6 +1,9 @@
-# SP lab from topology/topology.drawio (diagram "sp"): 10 Juniper vMX
-# P: R1-R4, PE: R5-R8, CE: R10, R20; id = router number, link ip .<id> (R10/R20: .9), loopbacks from the drawing
-# links are p2p: networks R<a>_R<b>, subnet 10.0.<a><b>.0/24 (R10/R20 count as 9)
+# SP lab from topology/topology.drawio (diagram "sp"): 10 Juniper vMX + 6 Debian CE hosts
+# P: R1-R4, PE: R5-R8, R10, R20; id = router number, link ip .<id> (R10/R20: .9), loopbacks 10.0.0.<id>
+# router links are p2p: networks R<a>_R<b>, subnet 10.0.<a><b>.0/24 (R10/R20 count as 9)
+# CE-<n>: Debian host behind R5-R8/R10/R20, link CE-<n>_R<x> 192.168.<n>.0/24 (CE .1, router .254);
+#   port 1 mgmt-1 172.255.1.1<n> with default via mgmt-1 NAT (internet), port 2 to the router with
+#   routes 10.0.0.0/8 and 192.168.0.0/16; id 20+<n> (MACs, consoles 6000+id*10)
 # all devices also on mgmt-1 (networks/mgmt.yaml); fxp0 static ip 172.255.1.<id> (vars interfaces.fxp0), no dhcp
 # config template configs/vmx.conf.j2, its vars in vars/<device>.jsonnet (common part: vars/common.libsonnet)
 
@@ -12,6 +15,13 @@ x-vmx: &vmx               # common part of all routers (x-* keys are ignored by 
   mgmt:
     network: mgmt-1
 
+x-ce: &ce                 # CE hosts: Debian cloud image
+  type: linux
+  user: maxim
+  ssh_keys:
+    - ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBM9Rs513ppdGvZsALPGJfkz2avWyuhr3DcOl4vGD5mgZVNO1eiKINqom9KrITTAZfU9oWiNvF9JbJ0k0CZq6qBk= omaxx@80a9971740eb
+    - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVflN8friZ1wjC2eEetBfyprfmrOfUhmMNhBiJxEZhUOKXzeK9jTNlDJR+FLqqMpjS+vp5pSL4A2mV1EDyQvDYLRKnQv4+gFJf+qY+2pMg5AiX2xQflJNJgCUrFnfRQVc9kdrcQU8Ov5VB86b9bm+ulBCyQCQI6XUSGDJ6WZFv9Qs+y8gTUkg7d3me/VQ3QVmrMkCTfC4ooNVHo2cemezWAduLLPOpBtlRiPvkwaChy+iN4462PguxNAL/pYQzAw20lwJfGfBWbbEtbNjD8jc4aUwC/VRKkVanuThxJVsplVZnUSziLfY/IHEzG84hisubVyrH1whkZUOaER/vh18Z maxx.orlov@gmail.com
+
 devices:
   R1:
     <<: *vmx
@@ -19,9 +29,9 @@ devices:
     ports:
       - p2p: R1_R3
       - p2p: R1_R4
+      - p2p: R1_R2
       - p2p: R1_R5
       - p2p: R1_R6
-      - p2p: R1_R2
     config: vmx.conf.j2
     vars: vars/R1.jsonnet
 
@@ -31,9 +41,9 @@ devices:
     ports:
       - p2p: R2_R4
       - p2p: R2_R3
+      - p2p: R1_R2
       - p2p: R2_R6
       - p2p: R2_R5
-      - p2p: R1_R2
     config: vmx.conf.j2
     vars: vars/R2.jsonnet
 
@@ -43,9 +53,9 @@ devices:
     ports:
       - p2p: R1_R3
       - p2p: R2_R3
+      - p2p: R3_R4
       - p2p: R3_R7
       - p2p: R3_R8
-      - p2p: R3_R4
     config: vmx.conf.j2
     vars: vars/R3.jsonnet
 
@@ -55,9 +65,9 @@ devices:
     ports:
       - p2p: R2_R4
       - p2p: R1_R4
+      - p2p: R3_R4
       - p2p: R4_R8
       - p2p: R4_R7
-      - p2p: R3_R4
     config: vmx.conf.j2
     vars: vars/R4.jsonnet
 
@@ -69,7 +79,7 @@ devices:
       - p2p: R2_R5
       - p2p: R5_R6
       - p2p: R5_R10
-      - p2p: R5_R7
+      - p2p: CE-11_R5
     config: vmx.conf.j2
     vars: vars/R5.jsonnet
 
@@ -81,7 +91,7 @@ devices:
       - p2p: R1_R6
       - p2p: R5_R6
       - p2p: R6_R10
-      - p2p: R6_R8
+      - p2p: CE-12_R6
     config: vmx.conf.j2
     vars: vars/R6.jsonnet
 
@@ -93,7 +103,7 @@ devices:
       - p2p: R4_R7
       - p2p: R7_R8
       - p2p: R7_R20
-      - p2p: R5_R7
+      - p2p: CE-21_R7
     config: vmx.conf.j2
     vars: vars/R7.jsonnet
 
@@ -105,7 +115,7 @@ devices:
       - p2p: R3_R8
       - p2p: R7_R8
       - p2p: R8_R20
-      - p2p: R6_R8
+      - p2p: CE-22_R8
     config: vmx.conf.j2
     vars: vars/R8.jsonnet
 
@@ -115,6 +125,7 @@ devices:
     ports:
       - p2p: R5_R10
       - p2p: R6_R10
+      - p2p: CE-10_R10
     config: vmx.conf.j2
     vars: vars/R10.jsonnet
 
@@ -124,7 +135,92 @@ devices:
     ports:
       - p2p: R7_R20
       - p2p: R8_R20
+      - p2p: CE-20_R20
     config: vmx.conf.j2
     vars: vars/R20.jsonnet
+
+  CE-10:
+    <<: *ce
+    id: 30
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.110/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-10_R10       # to R10 ge-0/0/2
+        ip: 192.168.10.1/24
+        routes:
+          10.0.0.0/8: 192.168.10.254
+          192.168.0.0/16: 192.168.10.254
+
+  CE-11:
+    <<: *ce
+    id: 31
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.111/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-11_R5       # to R5 ge-0/0/4
+        ip: 192.168.11.1/24
+        routes:
+          10.0.0.0/8: 192.168.11.254
+          192.168.0.0/16: 192.168.11.254
+
+  CE-12:
+    <<: *ce
+    id: 32
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.112/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-12_R6       # to R6 ge-0/0/4
+        ip: 192.168.12.1/24
+        routes:
+          10.0.0.0/8: 192.168.12.254
+          192.168.0.0/16: 192.168.12.254
+
+  CE-20:
+    <<: *ce
+    id: 40
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.120/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-20_R20       # to R20 ge-0/0/2
+        ip: 192.168.20.1/24
+        routes:
+          10.0.0.0/8: 192.168.20.254
+          192.168.0.0/16: 192.168.20.254
+
+  CE-21:
+    <<: *ce
+    id: 41
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.121/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-21_R7       # to R7 ge-0/0/4
+        ip: 192.168.21.1/24
+        routes:
+          10.0.0.0/8: 192.168.21.254
+          192.168.0.0/16: 192.168.21.254
+
+  CE-22:
+    <<: *ce
+    id: 42
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.122/24
+        gateway: 172.255.1.254   # default: internet via mgmt-1 NAT
+        dns: [172.255.1.254]
+      - p2p: CE-22_R8       # to R8 ge-0/0/4
+        ip: 192.168.22.1/24
+        routes:
+          10.0.0.0/8: 192.168.22.254
+          192.168.0.0/16: 192.168.22.254
 
 networks: {}  # mgmt-1 is in networks/mgmt.yaml; links come from p2p ports
