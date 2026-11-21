@@ -1,0 +1,13 @@
+type: jnpr/vqfx
+name: vqfx-1
+id: 4                     # MACs ca:ff:ee:04:...
+version: "20.2"           # images in /var/lib/vlab/images/junos/vqfx/20.2
+re_image: vqfx-20.2R1.10-re-qemu.qcow2
+fpc_image: vqfx-20.2R1-2019010209-pfe-qemu.qcow
+mgmt:                     # RE em0
+  network: mgmt-1
+  ip: 172.255.1.4/24
+  dhcp: true              # fixed lease + DNS name "vqfx-1" in mgmt-1
+ports:                    # xe-0/0/0, xe-0/0/1
+  - p2p: p2p-1
+  - p2p: p2p-2

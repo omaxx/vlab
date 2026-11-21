@@ -1,0 +1,43 @@
+system {
+    host-name {{ device.name }};
+    root-authentication {
+        encrypted-password "{{ root_password }}";
+    }
+    services {
+        ssh {
+            root-login allow;
+        }
+    }
+}
+chassis {
+    fpc 0 {
+        lite-mode;
+    }
+}
+interfaces {
+    fxp0 {
+        unit 0 {
+            family inet {
+                address {{ mgmt_ip }};
+            }
+        }
+    }
+{%- for name, ifc in interfaces.items() %}
+    {{ name }} {
+        unit 0 {
+            family inet {
+                address {{ ifc.ip }};
+            }
+        }
+    }
+{%- endfor %}
+}
+{%- if static_routes is defined and static_routes %}
+routing-options {
+    static {
+{%- for prefix, next_hop in static_routes.items() %}
+        route {{ prefix }} next-hop {{ next_hop }};
+{%- endfor %}
+    }
+}
+{%- endif %}

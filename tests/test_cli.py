@@ -31,7 +31,7 @@ def recorded(monkeypatch):
 def test_deploy(monkeypatch, overwrite):
     deployed = []
     monkeypatch.setattr(Linux, "deploy", lambda self, host, overwrite: deployed.append((self.name, host, overwrite)))
-    args = ["deploy", "-d", str(TOPOLOGY / "test.jsonnet/srv-1.jsonnet")] + (["--overwrite"] if overwrite else [])
+    args = ["deploy", "-d", str(TOPOLOGY / "jsonnet/srv-1.jsonnet")] + (["--overwrite"] if overwrite else [])
     r = invoke(*args)
     assert r.exit_code == 0, r.output
     assert deployed == [("srv-1", Host(), overwrite)]
@@ -44,9 +44,9 @@ def test_deploy_networks_before_devices(monkeypatch):
     monkeypatch.setattr(Network, "deploy", lambda self, host: order.append(self.name))
     r = invoke(
         "deploy",
-        "-d", str(TOPOLOGY / "test.jsonnet/srv-1.jsonnet"),
-        "-d", str(TOPOLOGY / "test.jsonnet/srv-2.jsonnet"),
-        "-n", str(TOPOLOGY / "test.jsonnet/mgmt-1.net.jsonnet"),
+        "-d", str(TOPOLOGY / "jsonnet/srv-1.jsonnet"),
+        "-d", str(TOPOLOGY / "jsonnet/srv-2.jsonnet"),
+        "-n", str(TOPOLOGY / "jsonnet/mgmt-1.net.jsonnet"),
     )
     assert r.exit_code == 0, r.output
     assert order == ["mgmt-1", "srv-1", "srv-2"]
@@ -60,9 +60,9 @@ def test_deploy_topology(monkeypatch):
     monkeypatch.setattr(Network, "deploy", lambda self, host: order.append(("network", self.name)))
     r = invoke(
         "deploy",
-        "-t", str(TOPOLOGY / "test.yaml/topology.yaml"),
-        "-n", str(TOPOLOGY / "test.yaml/networks/mgmt.yaml"),
-        "-d", str(TOPOLOGY / "test.jsonnet/srv-1.jsonnet"),
+        "-t", str(TOPOLOGY / "yaml/topology.yaml"),
+        "-n", str(TOPOLOGY / "yaml/networks/mgmt.yaml"),
+        "-d", str(TOPOLOGY / "jsonnet/srv-1.jsonnet"),
         "--overwrite",
     )
     assert r.exit_code == 0, r.output
@@ -78,7 +78,7 @@ def test_deploy_bad_spec_fails_before_changes(monkeypatch, tmp_path):
     monkeypatch.setattr(Network, "deploy", lambda self, host: deployed.append(self.name))
     bad = tmp_path / "bad.yaml"
     bad.write_text("type: router\nname: x\nid: 1\n")
-    r = invoke("deploy", "-n", str(TOPOLOGY / "test.yaml/networks/mgmt.yaml"), "-d", str(bad))
+    r = invoke("deploy", "-n", str(TOPOLOGY / "yaml/networks/mgmt.yaml"), "-d", str(bad))
     assert r.exit_code != 0
     assert deployed == []  # mgmt-1 not deployed: all specs load before any change
 

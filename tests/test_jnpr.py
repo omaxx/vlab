@@ -190,7 +190,7 @@ def test_inject_config_real_fat_image(tmp_path):
 
 @pytest.mark.parametrize("ext", ["yaml", "jsonnet"])
 def test_topology_vmx(ext):
-    d = yaml_spec("vmx-1") if ext == "yaml" else load_device(str(TOPOLOGY / "test.jsonnet/vmx-1.jsonnet"))
+    d = yaml_spec("vmx-1") if ext == "yaml" else load_device(str(TOPOLOGY / "jsonnet/vmx-1.jsonnet"))
     assert isinstance(d, VMX)
     assert (d.name, d.id, d.mgmt.ip, len(d.ports), d.config) == ("vmx-1", 3, "172.255.1.3/24", 3, "vmx.conf.j2")
     cfg = d.rendered_config
@@ -202,7 +202,7 @@ def test_topology_vmx(ext):
 
 def test_topology_vmx_yaml_equals_jsonnet():
     y = yaml_spec("vmx-1")
-    j = load_device(str(TOPOLOGY / "test.jsonnet/vmx-1.jsonnet"))
+    j = load_device(str(TOPOLOGY / "jsonnet/vmx-1.jsonnet"))
     assert y == j and y.rendered_config == j.rendered_config
 
 
@@ -249,7 +249,7 @@ def test_vqfx_prepare():
 
 
 def test_topology_vqfx():
-    d = load_device(str(TOPOLOGY / "test.yaml/devices/vqfx-1.yaml"))
+    d = load_device(str(TOPOLOGY / "yaml/devices/vqfx-1.yaml"))
     assert isinstance(d, VQFX)
     assert (d.name, d.version, d.dhcp_leases()) == (
         "vqfx-1", "20.2", [("mgmt-1", DHCPHost("ca:ff:ee:04:10:00", "172.255.1.4", "vqfx-1"))]

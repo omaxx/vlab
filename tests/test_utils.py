@@ -38,7 +38,7 @@ def test_unsupported(tmp_path):
 @pytest.mark.parametrize("n", [1, 2])
 def test_topology_yaml_and_jsonnet_match(n):
     y = yaml_spec(f"srv-{n}")
-    j = Linux.from_dict(load_file(str(TOPOLOGY / f"test.jsonnet/srv-{n}.jsonnet")))
+    j = Linux.from_dict(load_file(str(TOPOLOGY / f"jsonnet/srv-{n}.jsonnet")))
     assert y == j
     assert y.name == f"srv-{n}"
     assert [(p.network, p.p2p, p.ip) for p in y.ports] == [

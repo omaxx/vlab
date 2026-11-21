@@ -1,4 +1,4 @@
-"""topology/test.*: [srv-1] -- srv-1 -- [vmx-1] -- p2p-1/p2p-2 -- [vmx-2] -- srv-2 -- [srv-2] (+ mgmt-1)."""
+"""tests/topologies/{yaml,jsonnet}: [srv-1] -- srv-1 -- [vmx-1] -- p2p-1/p2p-2 -- [vmx-2] -- srv-2 -- [srv-2] (+ mgmt-1)."""
 
 from ipaddress import IPv4Interface
 
@@ -14,13 +14,13 @@ NETWORKS = ["mgmt-1"]  # regular networks; p2p links come from device ports
 
 
 def yaml_topo():
-    t = load_topology(str(TOPOLOGY / "test.yaml/topology.yaml"))
-    mgmt = Network.from_dict(load_file(str(TOPOLOGY / "test.yaml/networks/mgmt.yaml")))
+    t = load_topology(str(TOPOLOGY / "yaml/topology.yaml"))
+    mgmt = Network.from_dict(load_file(str(TOPOLOGY / "yaml/networks/mgmt.yaml")))
     return {d.name: d for d in t.devices}, {n.name: n for n in [mgmt, *t.networks]}
 
 
 def jsonnet_topo():
-    d = TOPOLOGY / "test.jsonnet"
+    d = TOPOLOGY / "jsonnet"
     devices = {n: load_device(str(d / f"{n}.jsonnet")) for n in DEVICES}
     networks = {n: Network.from_dict(load_file(str(d / f"{n}.net.jsonnet"))) for n in NETWORKS}
     return devices, networks

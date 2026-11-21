@@ -1,0 +1,98 @@
+# [srv-1] -- srv-1 -- [vmx-1] -- p2p-1/p2p-2 -- [vmx-2] -- srv-2 -- [srv-2]
+# all devices also on mgmt-1 (networks/mgmt.yaml); templates in configs/
+# p2p: links are created by the first device using them and removed with the last one
+
+devices:
+  srv-1:
+    type: linux
+    id: 1                     # MACs ca:ff:ee:01:00:<port>, host ifnames srv-1-<port>
+    user: $USER
+    ssh_key_files:
+      - ~/.ssh/id_ed25519.pub
+      - ~/.ssh/authorized_keys
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.1/24
+        gateway: 172.255.1.254
+        dns: [172.255.1.254]
+        dhcp: true            # fixed lease + DNS name in mgmt-1
+      - p2p: srv-1               # LAN to vmx-1
+        ip: 10.1.0.10/24
+        routes:
+          10.2.0.0/24: 10.1.0.1   # other server LAN via vmx-1
+
+  vmx-1:
+    type: jnpr/vmx
+    id: 3                     # MACs ca:ff:ee:03:..., consoles 127.0.0.1:6030 (RE) / 6035 (FPC)
+    version: 24.4R1-S2.9      # images in /var/lib/vlab/images/junos/vmx/24.4R1-S2.9
+    re_image: junos-vmx-x86-64-24.4R1-S2.9.qcow2
+    fpc_image: vFPC-20241118.img
+    mgmt:                     # RE fxp0
+      network: mgmt-1
+      ip: 172.255.1.3/24
+      dhcp: true              # fixed lease + DNS name "vmx-1" in mgmt-1
+    ports:                    # ge-0/0/0, ge-0/0/1, ge-0/0/2
+      - p2p: p2p-1              # to vmx-2
+      - p2p: p2p-2              # to vmx-2
+      - p2p: srv-1             # to srv-1
+    config: vmx.conf.j2         # configs/vmx.conf.j2
+    vars:
+      root_password: "$6$vlabvlab$5dQUFdNoOCf9So8AVoZ6h0YNmeTTcxbnITrhfaOBSO99pynAJEjKpJ28VT/7YgsVTfAbezIj2GwQjEF.gAD3m."  # lab only: "vlab123"
+      mgmt_ip: 172.255.1.3/24
+      interfaces:
+        ge-0/0/0:
+          ip: 192.168.1.3/24
+        ge-0/0/1:
+          ip: 192.168.2.3/24
+        ge-0/0/2:
+          ip: 10.1.0.1/24
+      static_routes:
+        10.2.0.0/24: 192.168.1.5   # srv-2 LAN via vmx-2 over p2p-1
+
+  vmx-2:
+    type: jnpr/vmx
+    id: 5                     # MACs ca:ff:ee:05:..., consoles 127.0.0.1:6050 (RE) / 6055 (FPC)
+    version: 24.4R1-S2.9      # images in /var/lib/vlab/images/junos/vmx/24.4R1-S2.9
+    re_image: junos-vmx-x86-64-24.4R1-S2.9.qcow2
+    fpc_image: vFPC-20241118.img
+    mgmt:                     # RE fxp0
+      network: mgmt-1
+      ip: 172.255.1.5/24
+      dhcp: true              # fixed lease + DNS name "vmx-2" in mgmt-1
+    ports:                    # ge-0/0/0, ge-0/0/1, ge-0/0/2
+      - p2p: p2p-1              # to vmx-1
+      - p2p: p2p-2              # to vmx-1
+      - p2p: srv-2             # to srv-2
+    config: vmx.conf.j2         # configs/vmx.conf.j2
+    vars:
+      root_password: "$6$vlabvlab$5dQUFdNoOCf9So8AVoZ6h0YNmeTTcxbnITrhfaOBSO99pynAJEjKpJ28VT/7YgsVTfAbezIj2GwQjEF.gAD3m."  # lab only: "vlab123"
+      mgmt_ip: 172.255.1.5/24
+      interfaces:
+        ge-0/0/0:
+          ip: 192.168.1.5/24
+        ge-0/0/1:
+          ip: 192.168.2.5/24
+        ge-0/0/2:
+          ip: 10.2.0.1/24
+      static_routes:
+        10.1.0.0/24: 192.168.1.3   # srv-1 LAN via vmx-1 over p2p-1
+
+  srv-2:
+    type: linux
+    id: 2                     # MACs ca:ff:ee:02:00:<port>, host ifnames srv-2-<port>
+    user: $USER
+    ssh_key_files:
+      - ~/.ssh/id_ed25519.pub
+      - ~/.ssh/authorized_keys
+    ports:
+      - network: mgmt-1
+        ip: 172.255.1.2/24
+        gateway: 172.255.1.254
+        dns: [172.255.1.254]
+        dhcp: true            # fixed lease + DNS name in mgmt-1
+      - p2p: srv-2               # LAN to vmx-2
+        ip: 10.2.0.10/24
+        routes:
+          10.1.0.0/24: 10.2.0.1   # other server LAN via vmx-2
+
+networks: {}  # regular networks would go here; mgmt-1 is in networks/mgmt.yaml

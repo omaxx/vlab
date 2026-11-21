@@ -6,13 +6,13 @@ import pytest
 
 from vlab.host import Host
 
-TOPOLOGY = Path(__file__).parent.parent / "topology"
+TOPOLOGY = Path(__file__).parent / "topologies"  # test-only topologies (topology/ is user data, not used by tests)
 
 
 def yaml_spec(name: str, kind: str = "devices"):
-    """Device or network spec by name from topology/test.yaml/topology.yaml."""
+    """Device or network spec by name from tests/topologies/yaml/topology.yaml."""
     from vlab.spec import load_topology
-    topo = load_topology(str(TOPOLOGY / "test.yaml/topology.yaml"))
+    topo = load_topology(str(TOPOLOGY / "yaml/topology.yaml"))
     return {x.name: x for x in getattr(topo, kind)}[name]
 
 
